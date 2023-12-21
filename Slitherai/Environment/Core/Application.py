@@ -10,19 +10,28 @@ class Application:
             cls.instance = super().__new__(cls)
         return cls.instance
 
-    def __init__(self, title: str, fps: int):
+    def __init__(self, title: str = "", fps: int = 0):
+        if title == "" or fps == 0:
+            return
+
         self.title: str = title
         self.fps: int = fps
-        self.time = 1 / fps
+        self.time = 1 / self.fps
 
-        pr.init_window(0, 0, self.title)
-        pr.set_target_fps(fps)
+        pr.init_window(100, 100, self.title)
+        pr.set_target_fps(self.fps)
         self.running: bool = True
         self.worlds: List[World] = []
         self.active_world: int = -1
 
     def __del__(self):
         pr.close_window()
+
+    def init_camera(self, camera: pr.Camera2D):
+        self.camera = camera
+
+    def update_camera(self, camera: pr.Camera2D):
+        self.camera = camera
 
     def add_world(self, world: World):
         self.worlds.append(world)
@@ -42,7 +51,9 @@ class Application:
     def render(self):
         pr.begin_drawing()
         pr.clear_background(pr.Color(255, 255, 255, 255))
+        pr.begin_mode_2d(self.camera)
         self.worlds[self.active_world].render()
+        pr.end_mode_2d()
         pr.end_drawing()
 
     def run(self):
