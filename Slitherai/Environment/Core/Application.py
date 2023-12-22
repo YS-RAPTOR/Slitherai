@@ -17,6 +17,8 @@ class Application:
         self.title: str = title
         self.fps: int = fps
         self.time = 1 / self.fps
+        self.width = 0
+        self.height = 0
 
         pr.init_window(100, 100, self.title)
         pr.set_target_fps(self.fps)
@@ -39,7 +41,10 @@ class Application:
     def set_active_world(self, World: int):
         if (len(self.worlds) - 1) < World:
             return False
-        self.worlds[self.active_world].destroy()
+
+        if self.active_world != -1:
+            self.worlds[self.active_world].destroy()
+
         self.active_world = World
         self.worlds[self.active_world].init()
         return True

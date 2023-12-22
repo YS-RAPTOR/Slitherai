@@ -103,6 +103,7 @@ class ClientNetworkManager(Component):
         self.client_socket.settimeout(100)
 
     def init(self):
+        print("Client Network Manager Init")
         self.client_socket.sendto(b"", self.server_address)
         data, address = self.client_socket.recvfrom(1024)
         if address != self.server_address:
