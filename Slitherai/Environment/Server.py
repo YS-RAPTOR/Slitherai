@@ -4,6 +4,7 @@ from Slitherai.Environment.Core.Entity import Entity
 from Slitherai.Environment.CameraComponent import ServerCameraComponent
 from Slitherai.Environment.NetworkManagerComponent import ServerNetworkManager
 from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
+from Slitherai.Environment.Core.GridWorld import GridWorld
 import pyray as pr
 
 
@@ -12,7 +13,7 @@ class Server(Application):
         super().__init__(title, fps)
         self.aspect_ratio: float = 9 / 16
 
-        self.width: int = OPTIMAL_RESOLUTION_WIDTH
+        self.width: int = pr.get_monitor_width(0)
         self.height: int = int(self.width * self.aspect_ratio)
 
         pr.set_window_size(self.width, self.height)
@@ -26,7 +27,8 @@ if __name__ == "__main__":
     # Initialize the client
     server = Server("Slitherai", 60)
     center = pr.Vector2(server.width / 2, server.height / 2)
-    camera = pr.Camera2D(center, pr.Vector2(0, 0), 0, 1)
+    zoom = pr.get_screen_width() / OPTIMAL_RESOLUTION_WIDTH
+    camera = pr.Camera2D(center, pr.Vector2(25000, 25000), 0, zoom)
     server.init_camera(camera)
 
     # Initialize the world
@@ -38,7 +40,7 @@ if __name__ == "__main__":
         ],
     )
 
-    world = World()
+    world = GridWorld(50000, 50, camera)
     world.add_entity(cameraController)
     server.add_world(world)
     server.set_active_world(0)

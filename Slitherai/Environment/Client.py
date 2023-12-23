@@ -7,6 +7,7 @@ from Slitherai.Environment.Instructions import Instructions
 from Slitherai.Environment.TextField import TextField
 from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
 import pyray as pr
+import radyx
 
 
 class Client(Application):

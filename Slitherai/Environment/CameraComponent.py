@@ -7,7 +7,7 @@ class ServerCameraComponent(Component):
     def __init__(self, app: Application) -> None:
         super().__init__()
         self.app = app
-        self.speed = 100
+        self.speed = 25
 
     def get_input_direction(self):
         x = 0
@@ -23,9 +23,7 @@ class ServerCameraComponent(Component):
         elif pr.is_key_down(pr.KeyboardKey.KEY_A):
             x = -1
 
-        self.input_dir = pr.vector2_normalize(
-            pr.Vector2(x * self.speed, y * self.speed)
-        )
+        self.input_dir = pr.Vector2(x * self.speed, y * self.speed)
 
     def update(self, delta_time: float):
         self.get_input_direction()

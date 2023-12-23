@@ -62,11 +62,7 @@ class ServerNetworkManager(Component):
 
     def replicate_world(self):
         # Replicate the server world to the clients
-        # world will be in form:
-        # players: [player]
-        # player : playerid, mass, [body_parts]
-        # food_created : [id, x, y, mass]
-        # food_destroyed : [id]
+        # Protocol is replication.md
         self.replicated_world = b"Hello"
         for player in self.entities.values():
             pass
