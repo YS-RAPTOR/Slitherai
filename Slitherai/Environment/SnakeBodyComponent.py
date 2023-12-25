@@ -174,6 +174,14 @@ class ClientSnakeBodyComponent(Component):
     def can_render(self, camera: pr.Camera2D) -> bool:
         return True
 
+    def shrink(self, mass: float) -> None:
+        self.radius -= mass * MASS_TO_RADIUS
+        if self.length() < len(self.bodies):
+            self.bodies.pop()
+
+    def length(self) -> int:
+        return int(pr.clamp(self.radius / 2, 1, MAX_LENGTH))
+
     def render(self, camera: pr.Camera2D):
         for part in self.bodies[1:]:
             pr.draw_circle_v(part, self.radius, pr.Color(128, 128, 128, 255))
@@ -244,6 +252,9 @@ class ClientSnakeBodyComponent(Component):
                 self.bodies[i] = pr.vector2_subtract(
                     self.bodies[i - 1], pr.vector2_scale(dir, len(self.bodies) / 2)
                 )
+            if self.can_boost():
+                self.shrink(BOOST_SHRINK_RATE * delta_time)
+
         else:
             self.optimistic_update(delta_time)
 

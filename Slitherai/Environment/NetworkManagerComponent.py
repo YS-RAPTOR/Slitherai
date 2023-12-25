@@ -88,44 +88,7 @@ class ServerNetworkManager(Component):
             )
 
             for entity_index in entity_indices:
-                try:
-                    entity = self.app.worlds[self.app.active_world].entities[
-                        entity_index
-                    ]
-                except IndexError:
-                    print("Information ", entity_index)
-                    print("Entity Information")
-                    for i, entity in enumerate(
-                        self.app.worlds[self.app.active_world].entities
-                    ):
-                        print(f"{i} : {entity}")
-                    ids = grid.get_collisions_within_area(
-                        pr.Vector2(25000, 25000), 25000
-                    )
-                    print("Grid Probe")
-                    for i in ids:
-                        try:
-                            print(
-                                f"{i} : { self.app.worlds[self.app.active_world].entities [i]}"
-                            )
-                        except IndexError:
-                            print(f"{i} : None")
-
-                    raise IndexError
-
-                component: ServerSnakeBodyComponent = entity.get_component(  # type: ignore
-                    CollisionComponent.component_id
-                )
-                if component is None:
-                    continue
-                if component.collision_type == ServerSnakeBodyComponent.collision_type:
-                    self.replicator.add_player(
-                        component.id, component.radius, component.bodies
-                    )
-                elif component.collision_type == Food.collision_type:
-                    self.replicator.add_food(
-                        entity_index, component.radius, component.bodies[0]
-                    )
+                entity = self.app.worlds[self.app.active_world].entities[entity_index]
 
             self.server_socket.sendto(self.replicator.encode(), client)
 

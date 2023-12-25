@@ -35,40 +35,17 @@ class GridWorld(World):
 
         collisions = self.grid.get_collisions()
         for collision in collisions:
-            try:
-                self_entity: CollisionComponent = self.entities[  # type: ignore
-                    collision.self_entity_index
-                ].get_component(CollisionComponent.component_id)
+            self_entity: CollisionComponent = self.entities[  # type: ignore
+                collision.self_entity_index
+            ].get_component(CollisionComponent.component_id)
 
-                other_entity: CollisionComponent = self.entities[  # type: ignore
-                    collision.other_entity_index
-                ].get_component(CollisionComponent.component_id)
+            other_entity: CollisionComponent = self.entities[  # type: ignore
+                collision.other_entity_index
+            ].get_component(CollisionComponent.component_id)
 
-                self_entity.on_collision(
-                    collision.self_body_index, other_entity, collision.other_body_index
-                )
-            except IndexError:
-                print("Collision Information")
-                for i in collisions:
-                    print(
-                        f"Self Entity Index: {i.self_entity_index} | Other Entity Index: {i.other_entity_index} | Self Body Index: {i.self_body_index} | Other Body Index: {i.other_body_index}"
-                    )
-
-                print("Entity Information")
-                for i, entity in enumerate(self.entities):
-                    print(f"{i} : {entity}")
-
-                ids = self.grid.get_collisions_within_area(
-                    pr.Vector2(25000, 25000), 25000
-                )
-                print("Grid Probe")
-                for i in ids:
-                    try:
-                        print(f"{i} : {self.entities[i]}")
-                    except IndexError:
-                        print(f"{i} : None")
-
-                raise IndexError
+            self_entity.on_collision(
+                collision.self_body_index, other_entity, collision.other_body_index
+            )
 
         super().update(delta_time)
 
