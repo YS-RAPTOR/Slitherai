@@ -1,13 +1,13 @@
-from Slitherai.Environment.Core.Application import Application
-from Slitherai.Environment.Core.World import World
-from Slitherai.Environment.Core.Entity import Entity
-from Slitherai.Environment.NetworkManagerComponent import ClientNetworkManager
-from Slitherai.Environment.ButtonComponent import StartButton
-from Slitherai.Environment.Instructions import Instructions
-from Slitherai.Environment.TextField import TextField
-from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
 import pyray as pr
-import radyx
+
+from Slitherai.Environment.ButtonComponent import StartButton
+from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
+from Slitherai.Environment.Core.Application import Application
+from Slitherai.Environment.Core.Entity import Entity
+from Slitherai.Environment.Core.World import World
+from Slitherai.Environment.Instructions import Instructions
+from Slitherai.Environment.NetworkManagerComponent import ClientNetworkManager
+from Slitherai.Environment.TextField import TextField
 
 
 class Client(Application):
@@ -19,7 +19,6 @@ class Client(Application):
         self.height: int = int(self.width * self.aspect_ratio)
 
         pr.set_window_size(self.width, self.height)
-        print(f"Window size: {self.width}x{self.height}")
 
 
 if __name__ == "__main__":
@@ -76,6 +75,8 @@ if __name__ == "__main__":
     world = World()
     world.add_entity(manager)
     client.add_world(world)
+
+    # TODO: Add Respawn World
 
     client.set_active_world(0)
 

@@ -1,6 +1,6 @@
-from sre_constants import CHARSET
-from Slitherai.Environment.Core.Component import Component
 import pyray as pr
+
+from Slitherai.Environment.Core.Component import Component
 
 
 class TextField(Component):
@@ -24,8 +24,6 @@ class TextField(Component):
         self.is_active = False
 
         text_area_pos = pr.Vector2(self.text_region.x, self.text_region.y)
-        print(text_area_pos.x)
-        print(text_area_pos.y)
         world_area_pos = pr.get_screen_to_world_2d(text_area_pos, camera)
         self.text_region.x = world_area_pos.x
         self.text_region.y = world_area_pos.y
@@ -77,7 +75,7 @@ class TextField(Component):
                         self.text += key
                 self.center_text()
 
-    def render(self):
+    def render(self, camera: pr.Camera2D):
         if self.is_active:
             pr.draw_rectangle_rounded_lines(
                 self.text_region,
@@ -105,3 +103,5 @@ class TextField(Component):
             self.text, self.text_x, self.text_y, self.text_font_size, self.color
         )
 
+    def can_render(self, camera: pr.Camera2D) -> bool:
+        return True

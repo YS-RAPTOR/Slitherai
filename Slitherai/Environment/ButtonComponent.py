@@ -1,9 +1,9 @@
-from Slitherai.Environment.Core.Component import Component
-from Slitherai.Environment.Core.Entity import Entity
-from Slitherai.Environment.Core.Application import Application
-from Slitherai.Environment.TextField import TextField
-from Slitherai.Environment.NetworkManagerComponent import ClientNetworkManager
 import pyray as pr
+
+from Slitherai.Environment.Core.Application import Application
+from Slitherai.Environment.Core.Component import Component
+from Slitherai.Environment.NetworkManagerComponent import ClientNetworkManager
+from Slitherai.Environment.TextField import TextField
 
 
 class ButtonComponent(Component):
@@ -59,11 +59,14 @@ class ButtonComponent(Component):
         ):
             self.on_click()
 
-    def render(self):
+    def render(self, camera: pr.Camera2D):
         pr.draw_rectangle_rounded(
             self.button_size, self.roundness, 0, self.button_color
         )
         pr.draw_text(self.text, self.x, self.y, self.font_size, self.text_color)
+
+    def can_render(self, camera: pr.Camera2D) -> bool:
+        return True
 
     def on_click(self):
         pass
@@ -118,8 +121,8 @@ class StartButton(ButtonComponent):
         if self.time <= 0:
             self.error = False
 
-    def render(self):
-        super().render()
+    def render(self, camera: pr.Camera2D):
+        super().render(camera)
         if self.error:
             pr.draw_text(
                 self.errorText,
@@ -135,8 +138,7 @@ class StartButton(ButtonComponent):
             address, port = self.textField.text.split(":")
             self.client.server_address = (address, int(port))
             self.app.set_active_world(self.nextWorld)
-        except:
+        except Exception:
             self.app.set_active_world(currentWorld)
             self.error = True
             self.time = self.errorTime
-

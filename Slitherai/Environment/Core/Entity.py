@@ -1,5 +1,8 @@
-from Slitherai.Environment.Core.Component import Component
 from typing import List
+
+import pyray as pr
+
+from Slitherai.Environment.Core.Component import Component
 
 
 class Entity:
@@ -7,12 +10,12 @@ class Entity:
         self.name: str = name
         self.components: List[Component] = components
         self.is_active: bool = True
+        self.can_update: bool = True
         for component in components:
-            component.init_callbacks(self.get_component)
+            component.init_callbacks(self.get_component, self.get_name, self.get_entity)
 
-    def __del__(self):
-        for component in self.components:
-            component.destroy()
+    def init_callbacks(self, get_world):
+        self.get_world = get_world
 
     def init(self):
         for component in self.components:
@@ -22,10 +25,16 @@ class Entity:
         for component in self.components:
             component.destroy()
 
+    def get_entity(self):
+        return self
+
     def add_component(self, component: Component):
         self.components.append(component)
-        component.init_callbacks(self.get_component)
+        component.init_callbacks(self.get_component, self.get_name, self.get_entity)
         component.init()
+
+    def get_name(self):
+        return self.name
 
     def get_component(self, component_type: int):
         for component in self.components:
@@ -40,8 +49,8 @@ class Entity:
         for component in self.components:
             component.update(delta_time)
 
-    def render(self):
+    def render(self, camera: pr.Camera2D):
         for component in self.components:
-            if component.can_render:
-                component.render()
+            if component.can_render(camera):
+                component.render(camera)
 

@@ -1,11 +1,12 @@
-from Slitherai.Environment.Core.Application import Application
-from Slitherai.Environment.Core.World import World
-from Slitherai.Environment.Core.Entity import Entity
-from Slitherai.Environment.CameraComponent import ServerCameraComponent
-from Slitherai.Environment.NetworkManagerComponent import ServerNetworkManager
-from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
-from Slitherai.Environment.Core.GridWorld import GridWorld
 import pyray as pr
+
+from Slitherai.Environment.CameraComponent import ServerCameraComponent
+from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
+from Slitherai.Environment.Core.Application import Application
+from Slitherai.Environment.Core.Entity import Entity
+from Slitherai.Environment.Core.GridWorld import GridWorld
+from Slitherai.Environment.Food import FoodSpawner
+from Slitherai.Environment.NetworkManagerComponent import ServerNetworkManager
 
 
 class Server(Application):
@@ -17,7 +18,7 @@ class Server(Application):
         self.height: int = int(self.width * self.aspect_ratio)
 
         pr.set_window_size(self.width, self.height)
-        pr.toggle_fullscreen()
+        # pr.toggle_fullscreen()
 
     def update(self):
         super().update()
@@ -31,17 +32,21 @@ if __name__ == "__main__":
     camera = pr.Camera2D(center, pr.Vector2(25000, 25000), 0, zoom)
     server.init_camera(camera)
 
+    pr.set_window_size(server.width, server.height)
+
     # Initialize the world
-    cameraController = Entity(
+    manager = Entity(
         "Manager",
         [
             ServerCameraComponent(server),
             ServerNetworkManager("127.0.0.1", 2003, server),
+            FoodSpawner(server),
         ],
     )
+    # TODO: Fix Changing directions for snake
 
-    world = GridWorld(50000, 50, camera)
-    world.add_entity(cameraController)
+    world = GridWorld(50000, 50)
+    world.add_entity(manager)
     server.add_world(world)
     server.set_active_world(0)
 
