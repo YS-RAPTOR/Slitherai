@@ -111,6 +111,8 @@ class ServerSnakeBodyComponent(CollisionComponent):
         direction_angle = np.arctan2(self.direction.y, self.direction.x) + np.pi / 2
 
         angle = input_angle - direction_angle
+        if angle < 0:
+            angle += np.pi * 2
         angle = angle if angle < np.pi else angle - np.pi * 2
 
         max_turn = self.max_turn()
@@ -233,6 +235,8 @@ class ClientSnakeBodyComponent(Component):
             direction_angle = np.arctan2(direction.y, direction.x) + np.pi / 2
             speed = BOOST_SPEED_CONSTANT if self.can_boost() else SPEED_CONSTANT
             angle = input_angle - direction_angle
+            if angle < 0:
+                angle += np.pi * 2
             angle = angle if angle < np.pi else angle - np.pi * 2
 
             max_turn = BOOST_TURN if self.can_boost() else MAX_TURN

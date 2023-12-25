@@ -89,6 +89,19 @@ class ServerNetworkManager(Component):
 
             for entity_index in entity_indices:
                 entity = self.app.worlds[self.app.active_world].entities[entity_index]
+                component: ServerSnakeBodyComponent = entity.get_component(  # type: ignore
+                    CollisionComponent.component_id
+                )
+                if component is None:
+                    continue
+                if component.collision_type == ServerSnakeBodyComponent.collision_type:
+                    self.replicator.add_player(
+                        component.id, component.radius, component.bodies
+                    )
+                elif component.collision_type == Food.collision_type:
+                    self.replicator.add_food(
+                        entity_index, component.radius, component.bodies[0]
+                    )
 
             self.server_socket.sendto(self.replicator.encode(), client)
 
@@ -119,11 +132,11 @@ class ClientNetworkManager(Component):
     def __init__(self, server_address: Tuple[str, int], app: Application):
         self.app = app
         self.server_address = server_address
-        self.client_socket = socket(AF_INET, SOCK_DGRAM)
-        self.client_socket.settimeout(100)
         self.replicator = Replicator()
 
     def init(self):
+        self.client_socket = socket(AF_INET, SOCK_DGRAM)
+        self.client_socket.settimeout(100)
         self.client_socket.sendto(b"", self.server_address)
         data, address = self.client_socket.recvfrom(1024)
         if address != self.server_address:
@@ -134,7 +147,7 @@ class ClientNetworkManager(Component):
         self.client_socket.settimeout(0.01)
 
     def handle_server_replication(self, data: bytes):
-        if int.from_bytes(data[:1], signed=True) == -1:
+        if int.from_bytes(data[:1], signed=True) == -1 and len(data) == 1:
             self.app.set_active_world(2)
             return
 
