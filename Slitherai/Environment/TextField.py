@@ -12,21 +12,14 @@ class TextField(Component):
         text_font_size: int,
         idle_color: pr.Color,
         color: pr.Color,
-        camera: pr.Camera2D,
     ) -> None:
         self.label = label
         self.label_font_size = label_font_size
         self.text_region = text_region
         self.text_font_size = text_font_size
-        self.camera = camera
 
         self.text: str = ""
         self.is_active = False
-
-        text_area_pos = pr.Vector2(self.text_region.x, self.text_region.y)
-        world_area_pos = pr.get_screen_to_world_2d(text_area_pos, camera)
-        self.text_region.x = world_area_pos.x
-        self.text_region.y = world_area_pos.y
 
         self.label_x = int(self.text_region.x + 5)
         self.label_y = int(self.text_region.y - 5 - self.label_font_size)
@@ -49,9 +42,7 @@ class TextField(Component):
         )
 
     def is_mouse_over(self) -> bool:
-        mouse_pos = pr.get_mouse_position()
-        mouse_pos = pr.get_screen_to_world_2d(mouse_pos, self.camera)
-        return pr.check_collision_point_rec(mouse_pos, self.text_region)
+        return pr.check_collision_point_rec(pr.get_mouse_position(), self.text_region)
 
     def update(self, delta_time: float):
         if pr.is_mouse_button_pressed(pr.MouseButton.MOUSE_BUTTON_LEFT):
@@ -105,3 +96,4 @@ class TextField(Component):
 
     def can_render(self, camera: pr.Camera2D) -> bool:
         return True
+

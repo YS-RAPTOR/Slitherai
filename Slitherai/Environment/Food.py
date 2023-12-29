@@ -47,7 +47,6 @@ class Food(CollisionComponent):
         entity: Entity = self.get_entity()
         world: GridWorld = entity.get_world()
         world.queue_entity_removal(entity)
-        # TODO : EVENT
         return self.mass
 
     def render(self, camera: pr.Camera2D):
@@ -70,6 +69,29 @@ class FoodSpawner(Component):
                 Entity("Food", [Food(pr.Vector2(x, y), do_render=IS_DEBUG)])
             )
 
+    def spawn_food(
+        self, location: pr.Vector2, radius: float = SPAWN_FOOD_AREA, mass_range=[1, 2]
+    ) -> int:
+        x = self.random.integers(
+            location.x - radius,
+            location.x + radius,
+        )
+        y = self.random.integers(
+            location.y - radius,
+            location.y + radius,
+        )
+        xClamped = np.clip(x, 0, self.size)
+        yClamped = np.clip(y, 0, self.size)
+
+        mass = self.random.integers(mass_range[0], mass_range[1])
+        self.app.worlds[self.app.active_world].add_entity(
+            Entity(
+                "Food",
+                [Food(pr.Vector2(xClamped, yClamped), mass=mass, do_render=IS_DEBUG)],
+            )
+        )
+        return mass
+
     def update(self, delta_time: float) -> None:
         random = self.random.random()
 
@@ -80,25 +102,10 @@ class FoodSpawner(Component):
         random_entity = self.random.integers(0, length)
         entity = self.app.worlds[self.app.active_world].entities[random_entity]
         food: Food = entity.get_component(Food.component_id)  # type: ignore
-        if food is None:
+        if food is None or food.collision_type != Food.collision_type:
             return
         if self.random.random() < 0.5:
-            x = self.random.integers(
-                food.bodies[0].x - SPAWN_FOOD_AREA,
-                food.bodies[0].x + SPAWN_FOOD_AREA,
-            )
-            y = self.random.integers(
-                food.bodies[0].y - SPAWN_FOOD_AREA,
-                food.bodies[0].y + SPAWN_FOOD_AREA,
-            )
-            xClamped = np.clip(x, 0, self.size)
-            yClamped = np.clip(y, 0, self.size)
-            self.app.worlds[self.app.active_world].add_entity(
-                Entity(
-                    "Food",
-                    [Food(pr.Vector2(xClamped, yClamped), do_render=IS_DEBUG)],
-                )
-            )
+            self.spawn_food(food.bodies[0])
         else:
             food.grow()
 

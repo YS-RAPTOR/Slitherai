@@ -12,11 +12,12 @@ from Slitherai.Environment.Core.CollisionComponent import CollisionComponent
 from Slitherai.Environment.Core.Component import Component
 from Slitherai.Environment.Core.Entity import Entity
 from Slitherai.Environment.Core.GridWorld import GridWorld
-from Slitherai.Environment.Food import Food
+from Slitherai.Environment.Food import Food, FoodSpawner
 from Slitherai.Environment.Replication import Replicator
 from Slitherai.Environment.SnakeBodyComponent import (
     ClientSnakeBodyComponent,
     ServerSnakeBodyComponent,
+    SnakeStatsComponent,
 )
 
 
@@ -35,6 +36,11 @@ class ServerNetworkManager(Component):
         self.app = app
         self.replicator = Replicator()
 
+    def init(self):
+        self.food_spawner = self.get_component(FoodSpawner.component_id)
+        if self.food_spawner is None:
+            raise Exception("FoodSpawner not found")
+
     def accept_connections(self, address: Tuple[str, int]):
         # Handle Incoming Connections
 
@@ -45,7 +51,9 @@ class ServerNetworkManager(Component):
         )
         direction = pr.Vector2(np.random.choice([-1, 1]), np.random.choice([-1, 1]))
 
-        component = ServerSnakeBodyComponent(location, direction, self.incrementing_id)
+        component = ServerSnakeBodyComponent(
+            location, direction, self.incrementing_id, self.food_spawner
+        )
         player = Entity(f"Player{self.incrementing_id}", [component])
 
         self.clients[address] = component
@@ -106,8 +114,11 @@ class ServerNetworkManager(Component):
             self.server_socket.sendto(self.replicator.encode(), client)
 
     def handle_disconnections(self, client_address: Tuple[str, int]):
-        component = self.clients.pop(client_address)
-        self.app.worlds[self.app.active_world].remove_entity(component.get_entity())
+        try:
+            component = self.clients.pop(client_address)
+            self.app.worlds[self.app.active_world].remove_entity(component.get_entity())
+        except Exception:
+            return
 
     def update(self, delta_time: float):
         for _ in range(100):
@@ -135,6 +146,7 @@ class ClientNetworkManager(Component):
         self.replicator = Replicator()
 
     def init(self):
+        self.not_found_streak = 0
         self.client_socket = socket(AF_INET, SOCK_DGRAM)
         self.client_socket.settimeout(100)
         self.client_socket.sendto(b"", self.server_address)
@@ -145,39 +157,39 @@ class ClientNetworkManager(Component):
         self.client_id = int.from_bytes(data)
         self.client_socket.setblocking(False)
         self.client_socket.settimeout(0.01)
+        self.stats_entity = None
 
     def handle_server_replication(self, data: bytes):
         if int.from_bytes(data[:1], signed=True) == -1 and len(data) == 1:
-            self.app.set_active_world(2)
+            self.app.set_active_world(0)
             return
 
         self.replicator.clear()
         self.replicator.decode(data)
         self.app.worlds[self.app.active_world].entities.clear()
+        if self.stats_entity is not None:
+            self.app.worlds[self.app.active_world].remove_ui_entity(self.stats_entity)
         self.app.worlds[self.app.active_world].entities.append(self.get_entity())
         found = False
 
         for player in self.replicator.players:
+            component = ClientSnakeBodyComponent(
+                self.client_id == player.id,
+                player.radius,
+                player.position,  # type: ignore
+            )
+
+            entity = Entity(f"Player{player.id}", [component])
+
             if player.id == self.client_id:
                 found = True
-            entity = Entity(
-                f"Player{player.id}",
-                [
-                    ClientSnakeBodyComponent(
-                        self.client_id == player.id,
-                        player.radius,
-                        player.position,  # type: ignore
-                    )
-                ],
-            )
+                self.stats_entity = Entity("Stats", [SnakeStatsComponent(component)])
+                self.app.worlds[self.app.active_world].add_ui_entity(self.stats_entity)
+
             entity.can_update = False
             self.app.worlds[self.app.active_world].add_entity(entity)
             if self.client_id == player.id:
                 self.app.camera.target = player.position[0]
-
-        if not found:
-            self.app.set_active_world(2)
-            return
 
         for food in self.replicator.foods:
             entity = Entity(
@@ -185,6 +197,13 @@ class ClientNetworkManager(Component):
                 [Food(food.position, radius=food.radius)],  # type: ignore
             )
             self.app.worlds[self.app.active_world].add_entity(entity)
+
+        if not found:
+            print("Not Found")
+            self.not_found_streak += 1
+            if self.not_found_streak >= 2:
+                self.app.set_active_world(2)
+                return
 
     def optimistic_replication(self, delta_time):
         for entity in self.app.worlds[self.app.active_world].entities:
@@ -217,6 +236,17 @@ class ClientNetworkManager(Component):
             self.handle_input()
 
     def destroy(self):
+        if self.stats_entity is not None:
+            try:
+                self.app.worlds[self.app.active_world].remove_ui_entity(
+                    self.stats_entity
+                )
+            except Exception:
+                pass
+
+        if not hasattr(self, "client_socket"):
+            return
+
         self.client_socket.sendto(b"\xff", self.server_address)
         self.client_socket.close()
 

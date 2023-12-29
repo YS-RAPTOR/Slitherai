@@ -1,6 +1,11 @@
 import pyray as pr
 
-from Slitherai.Environment.ButtonComponent import StartButton
+from Slitherai.Environment.ButtonComponent import (
+    ChangeWorldButton,
+    PauseButton,
+    QuitButton,
+    StartButton,
+)
 from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
 from Slitherai.Environment.Core.Application import Application
 from Slitherai.Environment.Core.Entity import Entity
@@ -19,6 +24,7 @@ class Client(Application):
         self.height: int = int(self.width * self.aspect_ratio)
 
         pr.set_window_size(self.width, self.height)
+        pr.set_exit_key(pr.KeyboardKey.KEY_RIGHT_ALT)
 
 
 if __name__ == "__main__":
@@ -30,7 +36,7 @@ if __name__ == "__main__":
     client.init_camera(camera)
     center = pr.Vector2(client.width / 2, client.height / 2)
 
-    button_width = 200
+    button_width = 250
     button_height = 50
     button_x = center.x - button_width / 2
     button_y = center.y - button_height / 2 + 40
@@ -43,8 +49,8 @@ if __name__ == "__main__":
     network_manager = ClientNetworkManager(("", 0), client)
 
     # Initialize title screen world
-    ui = Entity(
-        "UI",
+    titleUi = Entity(
+        "TitleUI",
         [
             Instructions(10, 10, 20, pr.Color(128, 128, 128, 255), camera),
             TextField(
@@ -54,31 +60,92 @@ if __name__ == "__main__":
                 20,
                 pr.Color(128, 128, 128, 255),
                 pr.Color(0, 0, 0, 255),
-                camera,
             ),
             StartButton(
                 pr.Rectangle(button_x, button_y, button_width, button_height),
-                camera,
                 client,
                 1,
                 network_manager,
+            ),
+            QuitButton(
+                pr.Rectangle(button_x, button_y + 60, button_width, button_height),
+                client,
             ),
         ],
     )
 
     title_screen = World()
-    title_screen.add_entity(ui)
+    title_screen.add_ui_entity(titleUi)
     client.add_world(title_screen)
+
+    # Pause UI
+    pauseUI = Entity(
+        "PauseUI",
+        [
+            Instructions(3, 130, 20, pr.Color(128, 128, 128, 255), camera),
+            ChangeWorldButton(
+                "Back To Menu",
+                pr.Rectangle(button_x, button_y, button_width, button_height),
+                pr.Color(128, 128, 128, 255),
+                client,
+                0,
+            ),
+            QuitButton(
+                pr.Rectangle(button_x, button_y + 60, button_width, button_height),
+                client,
+            ),
+        ],
+    )
+
+    pause_button = Entity(
+        "PauseButton",
+        [
+            PauseButton(
+                pr.Rectangle(button_x, button_y - 60, button_width, button_height),
+                pauseUI,
+            ),
+        ],
+    )
 
     # Initialize the game world
     manager = Entity("Manager", [network_manager])
+
     world = World()
     world.add_entity(manager)
+    world.add_ui_entity(pauseUI)
+    world.add_ui_entity(pause_button)
     client.add_world(world)
 
-    # TODO: Add Respawn World
+    respawnUI = Entity(
+        "RespawnUI",
+        [
+            Instructions(10, 10, 20, pr.Color(128, 128, 128, 255), camera),
+            ChangeWorldButton(
+                "Respawn",
+                pr.Rectangle(button_x, button_y - 60, button_width, button_height),
+                pr.Color(0, 117, 44, 255),
+                client,
+                1,
+            ),
+            ChangeWorldButton(
+                "Back To Menu",
+                pr.Rectangle(button_x, button_y, button_width, button_height),
+                pr.Color(128, 128, 128, 255),
+                client,
+                0,
+            ),
+            QuitButton(
+                pr.Rectangle(button_x, button_y + 60, button_width, button_height),
+                client,
+            ),
+        ],
+    )
+    respawn_world = World()
+    respawn_world.add_ui_entity(respawnUI)
+    client.add_world(respawn_world)
 
     client.set_active_world(0)
+    client.activate_world()
 
     # Start the client
     client.run()

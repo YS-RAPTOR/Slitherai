@@ -1,12 +1,15 @@
-from typing import List
+from typing import List, Self
 
 import numpy as np
 import pyray as pr
 
 from Slitherai.Environment.Constants import (
+    BOOST_DROP_RATE,
     BOOST_SHRINK_RATE,
     BOOST_SPEED_CONSTANT,
     BOOST_TURN,
+    DEATH_DROP_RATE,
+    DEATH_MASS_RANGE,
     MASS_TO_RADIUS,
     MAX_LENGTH,
     MAX_TURN,
@@ -15,12 +18,17 @@ from Slitherai.Environment.Constants import (
 )
 from Slitherai.Environment.Core.CollisionComponent import CollisionComponent
 from Slitherai.Environment.Core.Component import Component
-from Slitherai.Environment.Food import Food
+from Slitherai.Environment.Core.Event import Event
+from Slitherai.Environment.Food import Food, FoodSpawner
 
 
 class ServerSnakeBodyComponent(CollisionComponent):
     def __init__(
-        self, head_location: pr.Vector2, start_direction: pr.Vector2, id: int
+        self,
+        head_location: pr.Vector2,
+        start_direction: pr.Vector2,
+        id: int,
+        food_spawner: FoodSpawner,
     ) -> None:
         self.radius = 20
         self.id = id
@@ -28,6 +36,9 @@ class ServerSnakeBodyComponent(CollisionComponent):
         self.input_dir = self.direction
         self.is_boosting = False
         self.is_static = False
+        self.food_spawner = food_spawner
+        if self.food_spawner is None:
+            raise Exception("FoodSpawner not found")
 
         self.bodies: List[pr.Vector2] = [
             pr.Vector2(
@@ -43,6 +54,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
         entity = self.get_entity()
         world = entity.get_world()
         self.size = world.size
+        self.boost_food = 0
 
     def can_boost(self) -> bool:
         return self.is_boosting and self.radius > MIN_BOOST_RADIUS
@@ -62,26 +74,52 @@ class ServerSnakeBodyComponent(CollisionComponent):
 
     def killed(self):
         # TODO : EVENT
-        # Spawn food
+        food_mass = int((self.radius / MASS_TO_RADIUS) * DEATH_DROP_RATE)
+
+        while food_mass > 0:
+            food_mass -= self.food_spawner.spawn_food(
+                self.bodies[0], 50, DEATH_MASS_RANGE
+            )
+
         entity = self.get_entity()
         world = entity.get_world()
         world.queue_entity_removal(entity)
+
+    def EatingEvent(self, mass: float) -> None:
+        entity = self.get_entity()
+        world = entity.get_world()
+        event = Event(0, EntityThatAte=self.id, MassEaten=mass)
+        world.produce_event(event)
+
+    def KilledEvent(self, other: Self | None) -> None:
+        entity = self.get_entity()
+        world = entity.get_world()
+        if other is None:
+            killedEvent = Event(1, EntityKilled=self.id, KilledBy=None)
+            world.produce_event(killedEvent)
+        else:
+            killedEvent = Event(1, EntityKilled=self.id, KilledBy=other.id)
+            killEvent = Event(2, EntityThatKilled=other.id, KilledEntity=self.id)
 
     def on_collision(self, index: int, other: CollisionComponent, other_index: int):
         # Head is colliding
         if index == 0:
             # Head is colliding with food
             if other.collision_type == Food.collision_type:
-                self.grow(other.eat())  # type: ignore
+                mass = other.eat()  # type: ignore
+                self.EatingEvent(mass)
+                self.grow(mass)
             # Head is colliding with Body
             elif other.collision_type == self.collision_type:
+                self.KilledEvent(other)  # type: ignore
                 self.killed()
-            pass
         # Body is colliding
         else:
             # Body is colliding with food
             if other.collision_type == Food.collision_type:
-                self.grow(other.eat())  # type: ignore
+                mass = other.eat()  # type: ignore
+                self.EatingEvent(mass)
+                self.grow(mass)
 
     def set_controls(self, W, S, A, D, Space):
         x = 0
@@ -127,6 +165,16 @@ class ServerSnakeBodyComponent(CollisionComponent):
 
         if self.can_boost():
             self.shrink(BOOST_SHRINK_RATE * delta_time)
+            self.boost_food += BOOST_SHRINK_RATE * BOOST_DROP_RATE * delta_time
+            if self.boost_food >= 1:
+                self.boost_food -= 1
+                loc_dir = pr.vector2_normalize(
+                    pr.vector2_subtract(self.bodies[-2], self.bodies[-1])
+                )
+                loc = pr.vector2_subtract(
+                    self.bodies[-1], pr.vector2_scale(loc_dir, self.radius * 1.5)
+                )
+                self.food_spawner.spawn_food(loc, 1)
 
         for i in range(1, self.length()):
             dir = pr.vector2_normalize(
@@ -137,7 +185,13 @@ class ServerSnakeBodyComponent(CollisionComponent):
             )
 
         # Check if out of bounds
-        if self.bodies[0].x < 0 or self.bodies[0].x > self.size:
+        if (
+            self.bodies[0].x < 0
+            or self.bodies[0].x > self.size
+            or self.bodies[0].y < 0
+            or self.bodies[0].y > self.size
+        ):
+            self.KilledEvent(None)
             self.killed()
 
     def render(self, camera: pr.Camera2D) -> None:
@@ -171,7 +225,6 @@ class ClientSnakeBodyComponent(Component):
         self.is_player = is_player
         self.radius = radius
         self.bodies = bodies
-        self.stats_location = pr.Vector2(10, 10)
 
     def can_render(self, camera: pr.Camera2D) -> bool:
         return True
@@ -188,24 +241,6 @@ class ClientSnakeBodyComponent(Component):
         for part in self.bodies[1:]:
             pr.draw_circle_v(part, self.radius, pr.Color(128, 128, 128, 255))
         pr.draw_circle_v(self.bodies[0], self.radius, pr.Color(255, 0, 0, 255))
-
-        if self.is_player:
-            boost_text = (
-                "Can Boost"
-                if self.radius > MIN_BOOST_RADIUS
-                else f"Mass Remaining: {round((MIN_BOOST_RADIUS-self.radius)/MASS_TO_RADIUS)}"
-            )
-            boost_text += "\nBOOSTING" if self.can_boost() else "\nNOT BOOSTING"
-            player_pos = pr.vector2_add_value(self.bodies[0], 0)
-            pos = pr.get_screen_to_world_2d(self.stats_location, camera)
-            pr.draw_text_ex(
-                pr.get_font_default(),
-                f"Position: {round(player_pos.x)}, {round(player_pos.y)}\nMass: {round(self.radius/MASS_TO_RADIUS)}\n{boost_text}",
-                pos,
-                20,
-                1,
-                pr.Color(128, 128, 128, 255),
-            )
 
     def can_boost(self) -> bool:
         return (
@@ -277,4 +312,30 @@ class ClientSnakeBodyComponent(Component):
             self.bodies[i] = pr.vector2_subtract(
                 self.bodies[i - 1], pr.vector2_scale(dir, len(self.bodies) / 2)
             )
+
+
+class SnakeStatsComponent(Component):
+    def __init__(self, snake: ClientSnakeBodyComponent) -> None:
+        self.stats_location = pr.Vector2(10, 10)
+        self.snake = snake
+
+    def can_render(self, camera: pr.Camera2D) -> bool:
+        return True
+
+    def render(self, camera: pr.Camera2D):
+        boost_text = (
+            "Can Boost"
+            if self.snake.radius > MIN_BOOST_RADIUS
+            else f"Mass Remaining: {round((MIN_BOOST_RADIUS-self.snake.radius)/MASS_TO_RADIUS)}"
+        )
+        boost_text += "\nBOOSTING" if self.snake.can_boost() else "\nNOT BOOSTING"
+        player_pos = pr.vector2_add_value(self.snake.bodies[0], 0)
+        pr.draw_text_ex(
+            pr.get_font_default(),
+            f"Position: {round(player_pos.x)}, {round(player_pos.y)}\nMass: {round(self.snake.radius/MASS_TO_RADIUS)}\n{boost_text}",
+            self.stats_location,
+            20,
+            1,
+            pr.Color(128, 128, 128, 255),
+        )
 

@@ -30,8 +30,7 @@ class Application:
 
     def __del__(self):
         pr.close_window()
-        for world in self.worlds:
-            world.destroy()
+        self.worlds[self.active_world].destroy()
 
     def init_camera(self, camera: pr.Camera2D):
         self.camera = camera
@@ -45,17 +44,20 @@ class Application:
     def set_active_world(self, World: int):
         if (len(self.worlds) - 1) < World:
             return False
+        self.next_world = World
+        return True
 
+    def activate_world(self):
         if self.active_world != -1:
             self.worlds[self.active_world].destroy()
-
-        self.active_world = World
+        self.active_world = self.next_world
         self.worlds[self.active_world].init()
-        return True
 
     def update(self):
         self.running = not pr.window_should_close()
         self.worlds[self.active_world].update(pr.get_frame_time())
+        if self.active_world != self.next_world:
+            self.activate_world()
 
     def render(self):
         pr.begin_drawing()
@@ -63,7 +65,11 @@ class Application:
         pr.begin_mode_2d(self.camera)
         self.worlds[self.active_world].render(self.camera)
         pr.end_mode_2d()
+        self.worlds[self.active_world].ui_render(self.camera)
         pr.end_drawing()
+
+    def quit(self):
+        self.running = False
 
     def run(self):
         if self.active_world == -1:

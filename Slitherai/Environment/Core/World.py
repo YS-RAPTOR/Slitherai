@@ -82,10 +82,11 @@ class World:
 
     def render(self, camera: pr.Camera2D):
         for entity in self.entities:
-            if entity.is_active:
+            if entity.is_active and entity.can_render:
                 entity.render(camera)
 
+    def ui_render(self, camera):
         for entity in self.ui_entities:
-            if entity.is_active:
+            if entity.is_active and entity.can_render:
                 entity.render(camera)
 

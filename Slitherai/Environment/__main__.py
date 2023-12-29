@@ -70,7 +70,6 @@ if __name__ == "__main__":
                         np.rad2deg(new_angle_calculator(input_angle, direction_angle)),
                     )
                     print()
-                    i += 1
                     continue
 
             if abs(angle - new_angle_calculator(input_angle, direction_angle)) > 0.1:

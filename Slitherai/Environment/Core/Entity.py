@@ -11,6 +11,7 @@ class Entity:
         self.components: List[Component] = components
         self.is_active: bool = True
         self.can_update: bool = True
+        self.can_render: bool = True
         for component in components:
             component.init_callbacks(self.get_component, self.get_name, self.get_entity)
 
