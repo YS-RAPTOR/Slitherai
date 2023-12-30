@@ -41,8 +41,8 @@ class Component(metaclass=Component_Id):
     def update(self, delta_time: float):
         pass
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         pass
 
-    def can_render(self, camera: pr.Camera2D) -> bool:
+    def can_draw(self, camera: pr.Camera2D) -> bool:
         return True

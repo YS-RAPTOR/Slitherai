@@ -59,13 +59,13 @@ class Application:
         if self.active_world != self.next_world:
             self.activate_world()
 
-    def render(self):
+    def draw(self):
         pr.begin_drawing()
         pr.clear_background(pr.Color(255, 255, 255, 255))
         pr.begin_mode_2d(self.camera)
-        self.worlds[self.active_world].render(self.camera)
+        self.worlds[self.active_world].draw(self.camera)
         pr.end_mode_2d()
-        self.worlds[self.active_world].ui_render(self.camera)
+        self.worlds[self.active_world].ui_draw(self.camera)
         pr.end_drawing()
 
     def quit(self):
@@ -76,5 +76,5 @@ class Application:
             raise ValueError("No active world set")
         while self.running:
             self.update()
-            self.render()
+            self.draw()
 

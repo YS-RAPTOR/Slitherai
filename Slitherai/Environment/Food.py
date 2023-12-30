@@ -23,7 +23,7 @@ class Food(CollisionComponent):
         can_grow: bool = True,
         mass: int = 1,
         radius: float = 10,
-        do_render: bool = True,
+        do_draw: bool = True,
     ) -> None:
         super().__init__()
         self.bodies = [location]
@@ -31,15 +31,15 @@ class Food(CollisionComponent):
         self.color = pr.Color(0, 255, 0, 255)
         self.mass = mass
         self.can_grow = can_grow
-        self.do_render = do_render
+        self.do_draw = do_draw
 
     def grow(self):
         if self.mass < FOOD_MAX_MASS and self.can_grow:
             self.mass += 1
             self.radius += 1
 
-    def can_render(self, camera: pr.Camera2D) -> bool:
-        return self.do_render and pr.check_collision_point_circle(
+    def can_draw(self, camera: pr.Camera2D) -> bool:
+        return self.do_draw and pr.check_collision_point_circle(
             self.bodies[0], camera.target, OPTIMAL_RESOLUTION_WIDTH
         )
 
@@ -49,7 +49,7 @@ class Food(CollisionComponent):
         world.queue_entity_removal(entity)
         return self.mass
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         pr.draw_circle_v(self.bodies[0], self.radius, self.color)
 
 
@@ -66,7 +66,7 @@ class FoodSpawner(Component):
             x = self.random.integers(0, world.size)
             y = self.random.integers(0, world.size)
             world.add_entity(
-                Entity("Food", [Food(pr.Vector2(x, y), do_render=IS_DEBUG)])
+                Entity("Food", [Food(pr.Vector2(x, y), do_draw=IS_DEBUG)])
             )
 
     def spawn_food(
@@ -87,7 +87,7 @@ class FoodSpawner(Component):
         self.app.worlds[self.app.active_world].add_entity(
             Entity(
                 "Food",
-                [Food(pr.Vector2(xClamped, yClamped), mass=mass, do_render=IS_DEBUG)],
+                [Food(pr.Vector2(xClamped, yClamped), mass=mass, do_draw=IS_DEBUG)],
             )
         )
         return mass

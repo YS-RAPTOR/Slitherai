@@ -80,13 +80,13 @@ class World:
             self.remove_entity(entity)
         self.to_delete.clear()
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         for entity in self.entities:
-            if entity.is_active and entity.can_render:
-                entity.render(camera)
+            if entity.is_active and entity.can_draw:
+                entity.draw(camera)
 
-    def ui_render(self, camera):
+    def ui_draw(self, camera):
         for entity in self.ui_entities:
-            if entity.is_active and entity.can_render:
-                entity.render(camera)
+            if entity.is_active and entity.can_draw:
+                entity.draw(camera)
 

@@ -194,7 +194,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
             self.KilledEvent(None)
             self.killed()
 
-    def render(self, camera: pr.Camera2D) -> None:
+    def draw(self, camera: pr.Camera2D) -> None:
         for part in self.bodies:
             pr.draw_circle_v(part, self.radius, self.color)
 
@@ -226,7 +226,7 @@ class ClientSnakeBodyComponent(Component):
         self.radius = radius
         self.bodies = bodies
 
-    def can_render(self, camera: pr.Camera2D) -> bool:
+    def can_draw(self, camera: pr.Camera2D) -> bool:
         return True
 
     def shrink(self, mass: float) -> None:
@@ -237,7 +237,7 @@ class ClientSnakeBodyComponent(Component):
     def length(self) -> int:
         return int(pr.clamp(self.radius / 2, 1, MAX_LENGTH))
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         for part in self.bodies[1:]:
             pr.draw_circle_v(part, self.radius, pr.Color(128, 128, 128, 255))
         pr.draw_circle_v(self.bodies[0], self.radius, pr.Color(255, 0, 0, 255))
@@ -319,10 +319,10 @@ class SnakeStatsComponent(Component):
         self.stats_location = pr.Vector2(10, 10)
         self.snake = snake
 
-    def can_render(self, camera: pr.Camera2D) -> bool:
+    def can_draw(self, camera: pr.Camera2D) -> bool:
         return True
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         boost_text = (
             "Can Boost"
             if self.snake.radius > MIN_BOOST_RADIUS

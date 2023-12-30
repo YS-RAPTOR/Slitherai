@@ -11,7 +11,7 @@ class Entity:
         self.components: List[Component] = components
         self.is_active: bool = True
         self.can_update: bool = True
-        self.can_render: bool = True
+        self.can_draw: bool = True
         for component in components:
             component.init_callbacks(self.get_component, self.get_name, self.get_entity)
 
@@ -50,8 +50,8 @@ class Entity:
         for component in self.components:
             component.update(delta_time)
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         for component in self.components:
-            if component.can_render(camera):
-                component.render(camera)
+            if component.can_draw(camera):
+                component.draw(camera)
 

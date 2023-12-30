@@ -66,7 +66,7 @@ class TextField(Component):
                         self.text += key
                 self.center_text()
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         if self.is_active:
             pr.draw_rectangle_rounded_lines(
                 self.text_region,
@@ -94,6 +94,6 @@ class TextField(Component):
             self.text, self.text_x, self.text_y, self.text_font_size, self.color
         )
 
-    def can_render(self, camera: pr.Camera2D) -> bool:
+    def can_draw(self, camera: pr.Camera2D) -> bool:
         return True
 

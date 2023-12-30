@@ -12,7 +12,7 @@ class Instructions(Component):
         self.font_size = font_size
         self.font_color = font_color
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         pr.draw_text_ex(
             pr.get_font_default(),
             INSTRUCTIONS,
@@ -22,6 +22,6 @@ class Instructions(Component):
             self.font_color,
         )
 
-    def can_render(self, camera: pr.Camera2D) -> bool:
+    def can_draw(self, camera: pr.Camera2D) -> bool:
         return True
 

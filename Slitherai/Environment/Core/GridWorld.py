@@ -49,12 +49,12 @@ class GridWorld(World):
 
         super().update(delta_time)
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         pr.draw_grid(
             self.grid_size,
             self.block_size,
         )
         world_pos = pr.get_screen_to_world_2d(self.fps_pos, camera)
         pr.draw_fps(int(world_pos.x), int(world_pos.y))
-        super().render(camera)
+        super().draw(camera)
 

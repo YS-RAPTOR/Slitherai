@@ -44,7 +44,7 @@ class ServerCameraComponent(Component):
         )
         self.app.update_camera(update_camera)
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         pos = pr.get_screen_to_world_2d(self.camera_location_pos, camera)
         pr.draw_text(
             f"Camera: {int(camera.target.x)},{int(camera.target.y)}",

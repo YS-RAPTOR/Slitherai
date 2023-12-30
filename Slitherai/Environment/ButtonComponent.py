@@ -47,7 +47,7 @@ class ButtonComponent(Component):
         ):
             self.on_click()
 
-    def render(self, camera: pr.Camera2D):
+    def draw(self, camera: pr.Camera2D):
         pr.draw_rectangle_rounded(
             self.button_size, self.roundness, 0, self.button_color
         )
@@ -60,7 +60,7 @@ class ButtonComponent(Component):
             self.text_color,
         )
 
-    def can_render(self, camera: pr.Camera2D) -> bool:
+    def can_draw(self, camera: pr.Camera2D) -> bool:
         return True
 
     def on_click(self):
@@ -110,8 +110,8 @@ class StartButton(ButtonComponent):
         if self.time <= 0:
             self.error = False
 
-    def render(self, camera: pr.Camera2D):
-        super().render(camera)
+    def draw(self, camera: pr.Camera2D):
+        super().draw(camera)
         if self.error:
             pr.draw_text(
                 self.errorText,
@@ -150,8 +150,8 @@ class QuitButton(ButtonComponent):
         )
         self.app = app
 
-    def render(self, camera: pr.Camera2D):
-        super().render(camera)
+    def draw(self, camera: pr.Camera2D):
+        super().draw(camera)
 
     def on_click(self):
         self.app.quit()
@@ -177,8 +177,8 @@ class ChangeWorldButton(ButtonComponent):
         self.app = app
         self.nextWorld = nextWorld
 
-    def render(self, camera: pr.Camera2D):
-        super().render(camera)
+    def draw(self, camera: pr.Camera2D):
+        super().draw(camera)
 
     def on_click(self):
         self.app.set_active_world(self.nextWorld)
@@ -198,24 +198,24 @@ class PauseButton(ButtonComponent):
 
     def init(self):
         self.entity = self.get_entity()
-        self.entity.can_render = False
+        self.entity.can_draw = False
         self.pause_entity.is_active = False
 
     def pause(self):
-        self.entity.can_render = True
+        self.entity.can_draw = True
         self.pause_entity.is_active = True
 
     def resume(self):
-        self.entity.can_render = False
+        self.entity.can_draw = False
         self.pause_entity.is_active = False
 
-    def render(self, camera: pr.Camera2D):
-        super().render(camera)
+    def draw(self, camera: pr.Camera2D):
+        super().draw(camera)
 
     def update(self, delta_time: float):
         super().update(delta_time)
         if pr.is_key_pressed(pr.KeyboardKey.KEY_ESCAPE):
-            if self.entity.can_render:
+            if self.entity.can_draw:
                 self.resume()
             else:
                 self.pause()
