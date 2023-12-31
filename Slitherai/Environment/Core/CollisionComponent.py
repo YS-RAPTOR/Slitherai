@@ -1,4 +1,5 @@
-from typing import List, Self
+from typing import List 
+from typing_extensions import Self
 
 import pyray as pr
 

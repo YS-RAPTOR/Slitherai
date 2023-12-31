@@ -222,4 +222,3 @@ class PauseButton(ButtonComponent):
 
     def on_click(self):
         self.resume()
-

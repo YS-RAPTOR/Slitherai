@@ -47,6 +47,9 @@ class Application:
         self.next_world = World
         return True
 
+    def get_active_world(self) -> World:
+        return self.worlds[self.active_world]
+
     def activate_world(self):
         if self.active_world != -1:
             self.worlds[self.active_world].destroy()

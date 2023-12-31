@@ -22,6 +22,8 @@ class World:
         self.events.append(event)
 
     def consume_event(self):
+        if len(self.events) == 0:
+            return None
         return self.events.popleft()
 
     def add_entity(self, entity: Entity):

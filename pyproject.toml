@@ -10,7 +10,7 @@ license = { file = "LICENSE" }
 authors = [{ name = "YS-RAPTOR" }]
 urls = { homepage = "https://github.com/YS-RAPTOR/slitherai" }
 requires-python = ">=3.8"
-dependencies = ["raylib>=4.5.0", "numpy>=1.24.0", ""]
+dependencies = ["raylib>=4.5.0", "numpy>=1.24.0", "stable-baselines3>=2.2.0"]
 
 [tool.maturin]
 module-name = "Slitherai.Environment.Replication"

@@ -15,7 +15,7 @@ class GridWorld(World):
         self.grid = GridPhysics(self.size, self.block_size)
         self.fps_pos = pr.Vector2(10, 10)
 
-    def update(self, delta_time: float):
+    def update_grid(self):
         self.grid.reset()
         for i, entity in enumerate(self.entities):
             collision_comp: CollisionComponent = entity.get_component(  # type: ignore
@@ -33,6 +33,7 @@ class GridWorld(World):
                     i, collision_comp.bodies, collision_comp.radius
                 )
 
+    def update_collisions(self):
         collisions = self.grid.get_collisions()
         for collision in collisions:
             self_entity: CollisionComponent = self.entities[  # type: ignore
@@ -47,6 +48,9 @@ class GridWorld(World):
                 collision.self_body_index, other_entity, collision.other_body_index
             )
 
+    def update(self, delta_time: float):
+        self.update_grid()
+        self.update_collisions()
         super().update(delta_time)
 
     def draw(self, camera: pr.Camera2D):

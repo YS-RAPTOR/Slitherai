@@ -1,4 +1,5 @@
-from typing import List, Self
+from typing import List
+from typing_extensions import Self
 
 import numpy as np
 import pyray as pr
@@ -34,8 +35,9 @@ class ServerSnakeBodyComponent(CollisionComponent):
         self.id = id
         self.direction = pr.vector2_normalize(start_direction)
         self.input_dir = self.direction
-        self.is_boosting = False
+        self.boost_used = False
         self.is_static = False
+        self.is_dead = False
         self.food_spawner = food_spawner
         if self.food_spawner is None:
             raise Exception("FoodSpawner not found")
@@ -50,22 +52,40 @@ class ServerSnakeBodyComponent(CollisionComponent):
 
         self.color = pr.Color(128, 128, 128, 255)
 
+    def reset(self, head_location: pr.Vector2, direction: pr.Vector2):
+        self.radius = 20
+        self.direction = pr.vector2_normalize(direction)
+        self.input_dir = self.direction
+        self.boost_used = False
+        self.is_dead = False
+
+        self.bodies: List[pr.Vector2] = [
+            pr.Vector2(
+                head_location.x + self.direction.x * -i * (self.length() / 2),
+                head_location.y + self.direction.y * -i * (self.length() / 2),
+            )
+            for i in range(self.length())
+        ]
+
     def init(self):
         entity = self.get_entity()
         world = entity.get_world()
         self.size = world.size
         self.boost_food = 0
 
+    def is_boosting(self) -> bool:
+        return self.boost_used and self.can_boost()
+
     def can_boost(self) -> bool:
-        return self.is_boosting and self.radius > MIN_BOOST_RADIUS
+        return self.radius > MIN_BOOST_RADIUS
 
     def speed(self) -> float:
-        if self.can_boost():
+        if self.is_boosting():
             return BOOST_SPEED_CONSTANT
         return self.length() * SPEED_CONSTANT
 
     def max_turn(self) -> float:
-        if self.can_boost():
+        if self.is_boosting():
             return BOOST_TURN
         return MAX_TURN
 
@@ -73,7 +93,6 @@ class ServerSnakeBodyComponent(CollisionComponent):
         return int(pr.clamp(self.radius / 2, 1, MAX_LENGTH))
 
     def killed(self):
-        # TODO : EVENT
         food_mass = int((self.radius / MASS_TO_RADIUS) * DEATH_DROP_RATE)
 
         while food_mass > 0:
@@ -100,6 +119,8 @@ class ServerSnakeBodyComponent(CollisionComponent):
         else:
             killedEvent = Event(1, EntityKilled=self.id, KilledBy=other.id)
             killEvent = Event(2, EntityThatKilled=other.id, KilledEntity=self.id)
+            world.produce_event(killedEvent)
+            world.produce_event(killEvent)
 
     def on_collision(self, index: int, other: CollisionComponent, other_index: int):
         # Head is colliding
@@ -111,6 +132,10 @@ class ServerSnakeBodyComponent(CollisionComponent):
                 self.grow(mass)
             # Head is colliding with Body
             elif other.collision_type == self.collision_type:
+                if self.is_dead == True:
+                    return
+
+                self.is_dead = True
                 self.KilledEvent(other)  # type: ignore
                 self.killed()
         # Body is colliding
@@ -121,7 +146,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
                 self.EatingEvent(mass)
                 self.grow(mass)
 
-    def set_controls(self, W, S, A, D, Space):
+    def set_controls(self, W, A, S, D, Space):
         x = 0
         y = 0
 
@@ -135,7 +160,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
         elif A:
             x = -1
 
-        self.is_boosting = Space
+        self.boost_used = Space
 
         if x == 0 and y == 0:
             return
@@ -163,7 +188,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
             self.bodies[0],
         )
 
-        if self.can_boost():
+        if self.is_boosting():
             self.shrink(BOOST_SHRINK_RATE * delta_time)
             self.boost_food += BOOST_SHRINK_RATE * BOOST_DROP_RATE * delta_time
             if self.boost_food >= 1:
@@ -242,10 +267,11 @@ class ClientSnakeBodyComponent(Component):
             pr.draw_circle_v(part, self.radius, pr.Color(128, 128, 128, 255))
         pr.draw_circle_v(self.bodies[0], self.radius, pr.Color(255, 0, 0, 255))
 
+    def is_boosting(self) -> bool:
+        return pr.is_key_down(pr.KeyboardKey.KEY_SPACE) and self.can_boost()
+
     def can_boost(self) -> bool:
-        return (
-            pr.is_key_down(pr.KeyboardKey.KEY_SPACE) and self.radius > MIN_BOOST_RADIUS
-        )
+        return self.radius > MIN_BOOST_RADIUS
 
     def update(self, delta_time: float):
         if self.is_player:
@@ -268,13 +294,13 @@ class ClientSnakeBodyComponent(Component):
             input_angle = np.arctan2(y, x) + np.pi / 2
             direction = pr.vector2_subtract(self.bodies[0], self.bodies[1])
             direction_angle = np.arctan2(direction.y, direction.x) + np.pi / 2
-            speed = BOOST_SPEED_CONSTANT if self.can_boost() else SPEED_CONSTANT
+            speed = BOOST_SPEED_CONSTANT if self.is_boosting() else SPEED_CONSTANT
             angle = input_angle - direction_angle
             if angle < 0:
                 angle += np.pi * 2
             angle = angle if angle < np.pi else angle - np.pi * 2
 
-            max_turn = BOOST_TURN if self.can_boost() else MAX_TURN
+            max_turn = BOOST_TURN if self.is_boosting() else MAX_TURN
             angle = pr.clamp(angle, -max_turn, max_turn)
 
             direction = pr.vector2_rotate(direction, angle * delta_time)
@@ -291,7 +317,7 @@ class ClientSnakeBodyComponent(Component):
                 self.bodies[i] = pr.vector2_subtract(
                     self.bodies[i - 1], pr.vector2_scale(dir, len(self.bodies) / 2)
                 )
-            if self.can_boost():
+            if self.is_boosting():
                 self.shrink(BOOST_SHRINK_RATE * delta_time)
 
         else:
@@ -325,10 +351,10 @@ class SnakeStatsComponent(Component):
     def draw(self, camera: pr.Camera2D):
         boost_text = (
             "Can Boost"
-            if self.snake.radius > MIN_BOOST_RADIUS
+            if self.snake.can_boost()
             else f"Mass Remaining: {round((MIN_BOOST_RADIUS-self.snake.radius)/MASS_TO_RADIUS)}"
         )
-        boost_text += "\nBOOSTING" if self.snake.can_boost() else "\nNOT BOOSTING"
+        boost_text += "\nBOOSTING" if self.snake.is_boosting() else "\nNOT BOOSTING"
         player_pos = pr.vector2_add_value(self.snake.bodies[0], 0)
         pr.draw_text_ex(
             pr.get_font_default(),
@@ -338,4 +364,3 @@ class SnakeStatsComponent(Component):
             1,
             pr.Color(128, 128, 128, 255),
         )
-

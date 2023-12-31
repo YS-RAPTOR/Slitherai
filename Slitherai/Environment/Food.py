@@ -46,7 +46,9 @@ class Food(CollisionComponent):
     def eat(self):
         entity: Entity = self.get_entity()
         world: GridWorld = entity.get_world()
-        world.queue_entity_removal(entity)
+        if self.mass > 0:
+            self.mass = 0
+            world.queue_entity_removal(entity)
         return self.mass
 
     def draw(self, camera: pr.Camera2D):
@@ -60,14 +62,12 @@ class FoodSpawner(Component):
         self.random = np.random.default_rng()
 
     def init(self):
-        world: GridWorld = self.app.worlds[self.app.active_world]  # type: ignore
+        world: GridWorld = self.app.get_active_world()  # type: ignore
         self.size = world.size
         for _ in range(INITIAL_FOOD_SPAWN):
             x = self.random.integers(0, world.size)
             y = self.random.integers(0, world.size)
-            world.add_entity(
-                Entity("Food", [Food(pr.Vector2(x, y), do_draw=IS_DEBUG)])
-            )
+            world.add_entity(Entity("Food", [Food(pr.Vector2(x, y), do_draw=IS_DEBUG)]))
 
     def spawn_food(
         self, location: pr.Vector2, radius: float = SPAWN_FOOD_AREA, mass_range=[1, 2]
@@ -84,7 +84,7 @@ class FoodSpawner(Component):
         yClamped = np.clip(y, 0, self.size)
 
         mass = self.random.integers(mass_range[0], mass_range[1])
-        self.app.worlds[self.app.active_world].add_entity(
+        self.app.get_active_world().add_entity(
             Entity(
                 "Food",
                 [Food(pr.Vector2(xClamped, yClamped), mass=mass, do_draw=IS_DEBUG)],
@@ -98,9 +98,9 @@ class FoodSpawner(Component):
         if random >= delta_time / FOOD_DO_SOMETHING_EVERY:
             return
 
-        length = len(self.app.worlds[self.app.active_world].entities)
+        length = len(self.app.get_active_world().entities)
         random_entity = self.random.integers(0, length)
-        entity = self.app.worlds[self.app.active_world].entities[random_entity]
+        entity = self.app.get_active_world().entities[random_entity]
         food: Food = entity.get_component(Food.component_id)  # type: ignore
         if food is None or food.collision_type != Food.collision_type:
             return
@@ -108,4 +108,3 @@ class FoodSpawner(Component):
             self.spawn_food(food.bodies[0])
         else:
             food.grow()
-

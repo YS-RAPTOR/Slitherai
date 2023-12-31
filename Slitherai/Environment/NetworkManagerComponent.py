@@ -44,7 +44,7 @@ class ServerNetworkManager(Component):
     def accept_connections(self, address: Tuple[str, int]):
         # Handle Incoming Connections
 
-        world: GridWorld = self.app.worlds[self.app.active_world]  # type: ignore
+        world: GridWorld = self.app.get_active_world()  # type: ignore
 
         location = pr.Vector2(
             np.random.randint(0, world.size), np.random.randint(0, world.size)
@@ -57,7 +57,7 @@ class ServerNetworkManager(Component):
         player = Entity(f"Player{self.incrementing_id}", [component])
 
         self.clients[address] = component
-        self.app.worlds[self.app.active_world].add_entity(player)
+        self.app.get_active_world().add_entity(player)
 
         self.server_socket.sendto(self.incrementing_id.to_bytes(4), address)
         self.incrementing_id += 1
@@ -82,12 +82,12 @@ class ServerNetworkManager(Component):
         D = bool(input_bits & 0b1000)
         Space = bool(input_bits & 0b10000)
 
-        self.clients[client].set_controls(W, S, A, D, Space)
+        self.clients[client].set_controls(W, A, S, D, Space)
 
     def replicate_world(self):
         # Replicate the server world to the clients
         # Protocol is replication.md
-        grid: GridPhysics = self.app.worlds[self.app.active_world].grid  # type: ignore
+        grid: GridPhysics = self.app.get_active_world().grid  # type: ignore
 
         for client, component in self.clients.items():
             self.replicator.clear()
@@ -96,7 +96,7 @@ class ServerNetworkManager(Component):
             )
 
             for entity_index in entity_indices:
-                entity = self.app.worlds[self.app.active_world].entities[entity_index]
+                entity = self.app.get_active_world().entities[entity_index]
                 component: ServerSnakeBodyComponent = entity.get_component(  # type: ignore
                     CollisionComponent.component_id
                 )
@@ -116,7 +116,7 @@ class ServerNetworkManager(Component):
     def handle_disconnections(self, client_address: Tuple[str, int]):
         try:
             component = self.clients.pop(client_address)
-            self.app.worlds[self.app.active_world].remove_entity(component.get_entity())
+            self.app.get_active_world().remove_entity(component.get_entity())
         except Exception:
             return
 
@@ -166,10 +166,10 @@ class ClientNetworkManager(Component):
 
         self.replicator.clear()
         self.replicator.decode(data)
-        self.app.worlds[self.app.active_world].entities.clear()
+        self.app.get_active_world().entities.clear()
         if self.stats_entity is not None:
-            self.app.worlds[self.app.active_world].remove_ui_entity(self.stats_entity)
-        self.app.worlds[self.app.active_world].entities.append(self.get_entity())
+            self.app.get_active_world().remove_ui_entity(self.stats_entity)
+        self.app.get_active_world().entities.append(self.get_entity())
         found = False
 
         for player in self.replicator.players:
@@ -184,10 +184,10 @@ class ClientNetworkManager(Component):
             if player.id == self.client_id:
                 found = True
                 self.stats_entity = Entity("Stats", [SnakeStatsComponent(component)])
-                self.app.worlds[self.app.active_world].add_ui_entity(self.stats_entity)
+                self.app.get_active_world().add_ui_entity(self.stats_entity)
 
             entity.can_update = False
-            self.app.worlds[self.app.active_world].add_entity(entity)
+            self.app.get_active_world().add_entity(entity)
             if self.client_id == player.id:
                 self.app.camera.target = player.position[0]
 
@@ -196,7 +196,7 @@ class ClientNetworkManager(Component):
                 f"Food{food.id}",
                 [Food(food.position, radius=food.radius)],  # type: ignore
             )
-            self.app.worlds[self.app.active_world].add_entity(entity)
+            self.app.get_active_world().add_entity(entity)
 
         if not found:
             print("Not Found")
@@ -206,7 +206,7 @@ class ClientNetworkManager(Component):
                 return
 
     def optimistic_replication(self, delta_time):
-        for entity in self.app.worlds[self.app.active_world].entities:
+        for entity in self.app.get_active_world().entities:
             component: ClientSnakeBodyComponent = entity.get_component(  # type: ignore
                 ClientSnakeBodyComponent.component_id
             )
@@ -238,9 +238,7 @@ class ClientNetworkManager(Component):
     def destroy(self):
         if self.stats_entity is not None:
             try:
-                self.app.worlds[self.app.active_world].remove_ui_entity(
-                    self.stats_entity
-                )
+                self.app.get_active_world().remove_ui_entity(self.stats_entity)
             except Exception:
                 pass
 
@@ -249,4 +247,3 @@ class ClientNetworkManager(Component):
 
         self.client_socket.sendto(b"\xff", self.server_address)
         self.client_socket.close()
-
