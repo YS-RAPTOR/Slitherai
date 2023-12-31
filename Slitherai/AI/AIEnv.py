@@ -1,4 +1,4 @@
-from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
+from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH, MAX_LENGTH
 from Slitherai.Environment.Core.GridWorld import GridWorld
 from Slitherai.Environment.Food import Food, FoodSpawner
 from Slitherai.Environment.Server import Server
@@ -46,7 +46,7 @@ class AIEnv(VecEnv, Server):
         
         self.closest_foods = 25
         self.closest_players = 10
-        self.observation_size = 204 + self.closest_foods * 3 + self.closest_players * 204
+        self.observation_size = (MAX_LENGTH - 1) * 2 + 6 + self.closest_foods * 3 + self.closest_players * (4 + 2 * MAX_LENGTH) 
 
         # Add players to the world
         for i in range(num_players):
@@ -111,7 +111,7 @@ class AIEnv(VecEnv, Server):
             i += 1
 
         # If less than 99 body parts, fill with 0s
-        for _ in range(100 - len(player.bodies)):
+        for _ in range(MAX_LENGTH - len(player.bodies)):
             observations[i] = 0
             i += 1
             observations[i] = 0
@@ -204,7 +204,7 @@ class AIEnv(VecEnv, Server):
                     observations[i] = delta.y / self.world_size
                     i += 1
                 # If less than 100 body parts, fill with 0s
-                for _ in range(100 - len(p.bodies)):
+                for _ in range(MAX_LENGTH - len(p.bodies)):
                     observations[i] = 0
                     i += 1
                     observations[i] = 0
@@ -218,7 +218,7 @@ class AIEnv(VecEnv, Server):
                 i += 1
                 observations[i] = 0
                 i += 1
-                for _ in range(100):
+                for _ in range(MAX_LENGTH):
                     observations[i] = 0
                     i += 1
                     observations[i] = 0
@@ -252,16 +252,17 @@ class AIEnv(VecEnv, Server):
             if event.type == 0: # Food Eaten
                 entity_id = event.EntityThatAte
                 mass_eaten = event.MassEaten
+                # TODO: Food Eating Reward
                 rewards[entity_id] += mass_eaten
             elif event.type == 1: # Player Killed
                 entity_id = event.EntityKilled
                 killer_id = event.KilledBy
 
-                # Killed by border
+                # TODO: Killed by border reward
                 if killer_id is None:
                     rewards[entity_id] -= 100
 
-                # Killed by other player
+                # TODO: Killed by other player reward
                 rewards[entity_id] -= 10
 
                 # Terminate the player
@@ -276,10 +277,10 @@ class AIEnv(VecEnv, Server):
                 entity_id = event.EntityThatKilled
                 killed_id = event.KilledEntity
 
+                # TODO: Kill reward
                 rewards[entity_id] += 10
+
             event = self.get_active_world().consume_event()
-
-
 
         return observations, rewards, dones, infos
 
@@ -289,7 +290,6 @@ class AIEnv(VecEnv, Server):
 
         # Get Active world returns world. What is stored is GridWorld
         self.get_active_world().update_grid() # type: ignore
-        # TODO : Maybe more updates are needed?
         return np.array([self.get_observations(player) for player in self.players])
 
     def reset_player(self, player_id : int, dead = False) -> None:
@@ -325,7 +325,7 @@ class AIEnv(VecEnv, Server):
         return [None for _ in range(self.num_players)]
 
 if __name__ == "__main__":
-    env = AIEnv(10, 1000)
+    env = AIEnv(10, 50000)
     obs = env.reset()
     import time
     for i in range(1000):
