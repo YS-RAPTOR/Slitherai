@@ -1,8 +1,8 @@
 from typing import List
-from typing_extensions import Self
 
 import numpy as np
 import pyray as pr
+from typing_extensions import Self
 
 from Slitherai.Environment.Constants import (
     BOOST_DROP_RATE,
@@ -15,6 +15,7 @@ from Slitherai.Environment.Constants import (
     MAX_LENGTH,
     MAX_TURN,
     MIN_BOOST_RADIUS,
+    SHRINK_RATE_MULTIPLIER,
     SPEED_CONSTANT,
 )
 from Slitherai.Environment.Core.CollisionComponent import CollisionComponent
@@ -188,6 +189,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
             self.bodies[0],
         )
 
+        self.shrink(self.radius * SHRINK_RATE_MULTIPLIER * delta_time)
         if self.is_boosting():
             self.shrink(BOOST_SHRINK_RATE * delta_time)
             self.boost_food += BOOST_SHRINK_RATE * BOOST_DROP_RATE * delta_time

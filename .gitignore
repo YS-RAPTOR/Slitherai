@@ -16,3 +16,6 @@ __pycache__
 *.pyd
 venv
 *.cpython*
+models
+runs
+wandb
