@@ -31,7 +31,7 @@ class Server(Application):
             super().__init__(title, fps)
             self.aspect_ratio: float = 9 / 16
 
-            self.width: int = int(pr.get_monitor_width(0) / 4)
+            self.width: int = int(pr.get_monitor_width(0) / 2)
             self.height: int = int(self.width * self.aspect_ratio)
 
             pr.set_window_size(self.width, self.height)
@@ -68,11 +68,12 @@ class Server(Application):
 
 if __name__ == "__main__":
     # Initialize the client
-    GUI = False
+    GUI = True
+    WORLD_SIZE = 10000
     server = Server("Slitherai", 60, GUI)
     if GUI:
         center = pr.Vector2(server.width / 2, server.height / 2)
-        camera = pr.Camera2D(center, pr.Vector2(25000, 25000), 0, 1)
+        camera = pr.Camera2D(center, pr.Vector2(WORLD_SIZE // 2, WORLD_SIZE // 2), 0, 1)
         server.init_camera(camera)
 
     # Initialize the world
@@ -83,7 +84,7 @@ if __name__ == "__main__":
             [
                 ServerCameraComponent(server),
                 ServerNetworkManager(server.host, server.port, server),
-                AiManager(server, "./models/finished/pmjes7m7", food_spawner),
+                AiManager(server, "./models/finished/pmjes7m7", food_spawner, 10),
                 food_spawner,
             ],
         )
@@ -97,7 +98,7 @@ if __name__ == "__main__":
             ],
         )
 
-    world = GridWorld(50000, 50)
+    world = GridWorld(WORLD_SIZE, 50)
     world.add_entity(manager)
     server.add_world(world)
     server.set_active_world(0)

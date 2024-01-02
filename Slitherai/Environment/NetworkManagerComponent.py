@@ -146,6 +146,7 @@ class ClientNetworkManager(Component):
         self.app = app
         self.server_address = server_address
         self.replicator = Replicator()
+        self.stats_entity = None
 
     def init(self):
         self.not_found_streak = 0
