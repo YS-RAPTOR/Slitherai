@@ -15,11 +15,17 @@ from Slitherai.Environment.Constants import (
     MIN_BOOST_RADIUS,
     OPTIMAL_RESOLUTION_WIDTH,
 )
+from Slitherai.AI.Constants import (
+    ACTION_LIST,
+    CLOSEST_FOODS,
+    CLOSEST_PLAYERS,
+    OBSERVATION_SIZE,
+)
 from Slitherai.Environment.Core.Entity import Entity
 from Slitherai.Environment.Core.GridWorld import GridWorld
 from Slitherai.Environment.Core.World import World
 from Slitherai.Environment.Food import Food, FoodSpawner
-from Slitherai.Environment.Server import Server
+from Slitherai.Server import Server
 from Slitherai.Environment.SnakeBodyComponent import ServerSnakeBodyComponent
 
 
@@ -56,15 +62,6 @@ class AIEnv(VecEnv, Server):
             for i in range(self.num_players)
         ]
 
-        self.closest_foods = 25
-        self.closest_players = 10
-        self.observation_size = (
-            (MAX_LENGTH - 1) * 2
-            + 6
-            + self.closest_foods * 3
-            + self.closest_players * (4 + 2 * MAX_LENGTH)
-        )
-
         # Add players to the world
         for i in range(num_players):
             world.add_entity(Entity(f"Player {i}", [self.players[i]]))
@@ -73,27 +70,6 @@ class AIEnv(VecEnv, Server):
         self.add_world(world)
         self.set_active_world(0)
         self.activate_world()
-
-        # Initialize action list
-        self.action_list = [
-            # W, A, S, D, Space
-            (True, False, False, False, False),  # W
-            (False, True, False, False, False),  # A
-            (False, False, True, False, False),  # S
-            (False, False, False, True, False),  # D
-            (True, True, False, False, False),  # W + A
-            (True, False, False, True, False),  # W + D
-            (False, True, True, False, False),  # A + S
-            (False, False, True, True, False),  # S + D
-            (True, False, False, False, True),  # W + Space
-            (False, True, False, False, True),  # A + Space
-            (False, False, True, False, True),  # S + Space
-            (False, False, False, True, True),  # D + Space
-            (True, True, False, False, True),  # W + A + Space
-            (True, False, False, True, True),  # W + D + Space
-            (False, True, True, False, True),  # A + S + Space
-            (False, False, True, True, True),  # S + D + Space
-        ]
 
         # Track Timeout
         self.max_steps = max_steps
@@ -104,20 +80,20 @@ class AIEnv(VecEnv, Server):
             Box(
                 low=-self.world_size,
                 high=self.world_size,
-                shape=(self.observation_size,),
+                shape=(OBSERVATION_SIZE,),
                 dtype=np.float32,
             ),
-            Discrete(len(self.action_list)),
+            Discrete(len(ACTION_LIST)),
         )
 
     def get_action(self, action: np.ndarray) -> Tuple[bool, bool, bool, bool, bool]:
-        return self.action_list[action]
+        return ACTION_LIST[action]
 
     def get_observations(self, player: ServerSnakeBodyComponent) -> np.ndarray:
         # My Snake Body Observations
         origin = player.bodies[0]
 
-        observations = np.zeros((self.observation_size,), np.float32)
+        observations = np.zeros((OBSERVATION_SIZE,), np.float32)
         i = 0
 
         # My radius [1 float]
@@ -186,21 +162,21 @@ class AIEnv(VecEnv, Server):
                 players.append(component)
 
         # Not filled with any nones if greater than 25. If less than 25, filled with Nones
-        if len(foods) > self.closest_foods:
+        if len(foods) > CLOSEST_FOODS:
             foods = sorted(
                 foods,
                 key=lambda food: pr.vector_2distance_sqr(food.bodies[0], origin),  # type: ignore
-            )[: self.closest_foods]
+            )[:CLOSEST_FOODS]
         else:
-            foods += [None for _ in range(self.closest_foods - len(foods))]
+            foods += [None for _ in range(CLOSEST_FOODS - len(foods))]
 
-        if len(players) > self.closest_players:
+        if len(players) > CLOSEST_PLAYERS:
             players = sorted(
                 players,
                 key=lambda player: pr.vector_2distance_sqr(player.bodies[0], origin),  # type: ignore
-            )[: self.closest_players]  # type: ignore
+            )[:CLOSEST_PLAYERS]
         else:
-            players += [None for _ in range(self.closest_players - len(players))]
+            players += [None for _ in range(CLOSEST_PLAYERS - len(players))]
 
         # Closest 25 Foods and their radius and distance [3 floats].
         # If less than 25 foods, fill with 0s
@@ -266,7 +242,7 @@ class AIEnv(VecEnv, Server):
                     observations[i] = 0
                     i += 1
         # Total Floats 2020
-        if i != 2319:
+        if i != OBSERVATION_SIZE:
             raise Exception("Observation size is not 2319")
         return observations  # Full Total Floats 2319
 

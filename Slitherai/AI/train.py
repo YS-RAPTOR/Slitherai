@@ -45,7 +45,7 @@ config = {
 
 def main():
     env = VecMonitor(AIEnv(config["number_of_agents"]))
-    eval_env = VecMonitor(AIEnv(config["number_of_agents"], 50000, 7200))
+    eval_env = VecMonitor(AIEnv(10, 10000, 3600))
 
     if USE_WANDB:
         run = wandb.init(
@@ -79,21 +79,27 @@ def main():
         policy_kwargs=config["policy_kwargs"],
     )
 
-    eval_callback = EvalCallback(eval_env, eval_freq=300)
+    eval_callback = EvalCallback(eval_env, eval_freq=6000)
     if USE_WANDB:
         wandb_callback = WandbCallback(
-            gradient_save_freq=100,
+            gradient_save_freq=500,
             model_save_path=f"models/{run.id}",
-            model_save_freq=300,
+            model_save_freq=500,
             verbose=2,
         )
         callbaks = CallbackList([eval_callback, wandb_callback])
 
         model.learn(
             total_timesteps=config["total_timesteps"],
+            progress_bar=True,
             callback=callbaks,
         )
         run.finish()
+
+        import os
+
+        os.makedirs("models/finished", exist_ok=True)
+        model.save(f"models/finished/{run.id}")
     else:
         model.learn(
             total_timesteps=config["total_timesteps"],

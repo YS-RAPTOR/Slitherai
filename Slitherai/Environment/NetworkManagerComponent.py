@@ -61,6 +61,7 @@ class ServerNetworkManager(Component):
 
         self.server_socket.sendto(self.incrementing_id.to_bytes(4), address)
         self.incrementing_id += 1
+        print(f"Connected to {address}")
 
     def handle_input(self, client: Tuple[str, int], data: bytes):
         # Handle input from the clients
@@ -117,6 +118,7 @@ class ServerNetworkManager(Component):
         try:
             component = self.clients.pop(client_address)
             self.app.get_active_world().remove_entity(component.get_entity())
+            print(f"Disconnected from {client_address}")
         except Exception:
             return
 

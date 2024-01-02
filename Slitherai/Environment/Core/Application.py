@@ -7,12 +7,6 @@ from Slitherai.Environment.Core.World import World
 
 # Create a singleton instance of the application
 class Application:
-    def __new__(cls, *args):
-        _ = args
-        if not hasattr(cls, "instance"):
-            cls.instance = super().__new__(cls)
-        return cls.instance
-
     def __init__(self, title: str = "", fps: int = 0):
         if title == "" or fps == 0:
             return
@@ -80,4 +74,3 @@ class Application:
         while self.running:
             self.update()
             self.draw()
-
