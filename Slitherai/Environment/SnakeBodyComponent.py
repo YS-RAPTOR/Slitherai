@@ -91,7 +91,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
         return MAX_TURN
 
     def length(self) -> int:
-        return int(pr.clamp(self.radius / 2, 1, MAX_LENGTH))
+        return int(pr.clamp(self.radius / 2, 3, MAX_LENGTH))
 
     def killed(self):
         food_mass = int((self.radius / MASS_TO_RADIUS) * DEATH_DROP_RATE)
@@ -133,7 +133,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
                 self.grow(mass)
             # Head is colliding with Body
             elif other.collision_type == self.collision_type:
-                if self.is_dead == True:
+                if self.is_dead:
                     return
 
                 self.is_dead = True
@@ -229,7 +229,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
 
     def grow(self, mass: float) -> None:
         self.radius += mass * MASS_TO_RADIUS
-        if self.length() > len(self.bodies):
+        while self.length() > len(self.bodies):
             dir = pr.vector2_normalize(
                 pr.vector2_subtract(self.bodies[-2], self.bodies[-1])
             )
@@ -241,7 +241,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
 
     def shrink(self, mass: float) -> None:
         self.radius -= mass * MASS_TO_RADIUS
-        if self.length() < len(self.bodies):
+        while self.length() < len(self.bodies):
             self.bodies.pop()
 
 

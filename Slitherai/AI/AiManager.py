@@ -96,15 +96,15 @@ class AiManager(Component):
         # Environment Observations
         # Closest Distance to Edge [2 floats] normalized using world_size
         if origin.x > self.world_size / 2:
-            observations[i] = self.world_size - origin.x
+            observations[i] = (self.world_size - origin.x) / self.world_size
         else:
-            observations[i] = -origin.x
+            observations[i] = (-origin.x) / self.world_size
         i += 1
 
         if origin.y > self.world_size / 2:
-            observations[i] = self.world_size - origin.y
+            observations[i] = (self.world_size - origin.y) / self.world_size
         else:
-            observations[i] = -origin.y
+            observations[i] = (-origin.y) / self.world_size
         i += 1
 
         # Food and Player Observations

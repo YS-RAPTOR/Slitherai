@@ -46,10 +46,11 @@ class Food(CollisionComponent):
     def eat(self):
         entity: Entity = self.get_entity()
         world: GridWorld = entity.get_world()
+        mass = self.mass
         if self.mass > 0:
             self.mass = 0
             world.queue_entity_removal(entity)
-        return self.mass
+        return mass
 
     def draw(self, camera: pr.Camera2D):
         pr.draw_circle_v(self.bodies[0], self.radius, self.color)

@@ -1,5 +1,4 @@
 import pyray as pr
-import time
 
 from Slitherai.Environment.CameraComponent import ServerCameraComponent
 from Slitherai.Environment.Constants import IS_DEBUG, OPTIMAL_RESOLUTION_WIDTH
@@ -105,4 +104,7 @@ if __name__ == "__main__":
     server.activate_world()
 
     # Start the client
+    print("Starting server...")
+    print(f"Listening on {server.host}:{server.port}")
     server.run()
+    print("Server closed.")

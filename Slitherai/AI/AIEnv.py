@@ -36,7 +36,7 @@ class AIEnv(VecEnv, Server):
         num_players: int,
         world_size: int = 50000,
         max_steps: int = -1,
-        frame_rate=60,
+        frame_rate=20,
     ):
         # Variables
         self.frame_rate = frame_rate
@@ -130,15 +130,15 @@ class AIEnv(VecEnv, Server):
         # Environment Observations
         # Closest Distance to Edge [2 floats] normalized using world_size
         if origin.x > self.world_size / 2:
-            observations[i] = self.world_size - origin.x
+            observations[i] = (self.world_size - origin.x) / self.world_size
         else:
-            observations[i] = -origin.x
+            observations[i] = (-origin.x) / self.world_size
         i += 1
 
         if origin.y > self.world_size / 2:
-            observations[i] = self.world_size - origin.y
+            observations[i] = (self.world_size - origin.y) / self.world_size
         else:
-            observations[i] = -origin.y
+            observations[i] = (-origin.y) / self.world_size
         i += 1
 
         # Food and Player Observations
@@ -169,6 +169,12 @@ class AIEnv(VecEnv, Server):
             )[:CLOSEST_FOODS]
         else:
             foods += [None for _ in range(CLOSEST_FOODS - len(foods))]
+
+        # Remove self
+        for index in range(len(players)):
+            if players[index].id == player.id:  # type: ignore
+                players.pop(index)
+                break
 
         if len(players) > CLOSEST_PLAYERS:
             players = sorted(
@@ -202,7 +208,7 @@ class AIEnv(VecEnv, Server):
 
         # 10 Closest Player Information
         for p in players:
-            if p is not None and p.id != player.id:
+            if p is not None:
                 # My radius [1 float]
                 observations[i] = p.radius
                 i += 1
@@ -267,44 +273,56 @@ class AIEnv(VecEnv, Server):
         infos = [{} for _ in range(self.num_players)]
 
         event = self.get_active_world().consume_event()
-        # TODO : Better reward system
+
         while event is not None:
             if event.type == 0:  # Food Eaten
                 entity_id = event.EntityThatAte
                 mass_eaten = event.MassEaten
-                # TODO: Food Eating Reward
-                rewards[entity_id] += mass_eaten / 50  # Max reward is 1
+                # Food Eating Reward
+                rewards[entity_id] += mass_eaten
             elif event.type == 1:  # Player Killed
                 entity_id = event.EntityKilled
                 killer_id = event.KilledBy
 
-                # TODO: Killed by border reward
                 if killer_id is None:
-                    rewards[entity_id] -= 100
-
-                # TODO: Killed by other player reward
-                rewards[entity_id] -= 10
+                    # Killed by border reward
+                    rewards[entity_id] -= 10
+                else:
+                    # Killed by other player reward. Also, if killed by smaller player, give bigger punishment
+                    rewards[entity_id] -= np.max(
+                        [
+                            self.players[entity_id].radius
+                            - self.players[killer_id].radius,
+                            1,
+                        ]
+                    )
 
                 # Terminate the player
                 dones[entity_id] = True  # Cannot be truncated
                 infos[entity_id]["TimeLimit.truncated"] = False
                 infos[entity_id]["terminal_observation"] = observations[entity_id]
                 self.reset_player(entity_id, True)
+                # TODO: Not sure if this is needed
                 self.get_active_world().update_grid()  # type: ignore
                 observations[entity_id] = self.get_observations(self.players[entity_id])
 
             elif event.type == 2:  # Player Kill
                 entity_id = event.EntityThatKilled
-                # killed_id = event.KilledEntity
+                killed_id = event.KilledEntity
 
-                # TODO: Kill reward
-                rewards[entity_id] += 10
+                # Kill reward. If killed bigger player, give bigger reward
+                rewards[entity_id] += np.max(
+                    [self.players[killed_id].radius - self.players[entity_id].radius, 1]
+                )
 
             event = self.get_active_world().consume_event()
 
-        # TODO: Other rewards
+        # Other rewards
         for i in range(self.num_players):
+            # Size reward
+            rewards[i] += self.players[i].length() / MAX_LENGTH
             if not self.players[i].can_boost() and self.actions[i] >= 8:
+                # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
 
         # Max Steps
@@ -376,8 +394,13 @@ class AIEnv(VecEnv, Server):
 
 if __name__ == "__main__":
     print("Testing AIEnv")
-    env = AIEnv(10, 50000)
+    num_agents = 10
+    env = AIEnv(num_agents, 1000)
     obs = env.reset()
     for step in range(1000):
-        obs, rewards, dones, infos = env.step(env.action_space.sample())
+        obs, rewards, dones, infos = env.step(
+            np.array([env.action_space.sample() for _ in range(num_agents)])
+        )
+        for i in range(len(rewards)):
+            print(f"Agent {i} got reward {rewards[i]}")
         print(f"Step {step}")

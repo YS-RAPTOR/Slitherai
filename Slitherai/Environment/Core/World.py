@@ -91,4 +91,3 @@ class World:
         for entity in self.ui_entities:
             if entity.is_active and entity.can_draw:
                 entity.draw(camera)
-
