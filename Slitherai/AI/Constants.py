@@ -1,12 +1,12 @@
 from Slitherai.Environment.Constants import MAX_LENGTH
 
-CLOSEST_FOODS = 25
-CLOSEST_PLAYERS = 10
+CLOSEST_FOODS = 5
+CLOSEST_PLAYERS = 3
 OBSERVATION_SIZE = (
     (MAX_LENGTH - 1) * 2
-    + 6
+    + 7
     + CLOSEST_FOODS * 3
-    + CLOSEST_PLAYERS * (4 + 2 * MAX_LENGTH)
+    + CLOSEST_PLAYERS * (5 + 2 * MAX_LENGTH)
 )
 ACTION_LIST = [
     # W, A, S, D, Space

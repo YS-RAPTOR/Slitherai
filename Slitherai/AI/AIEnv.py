@@ -119,6 +119,10 @@ class AIEnv(VecEnv, Server):
         observations[i] = 1.0 if player.is_boosting() else 0.0
         i += 1
 
+        # Can Boost [1 float] 0 or 1
+        observations[i] = 1.0 if player.can_boost() else 0.0
+        i += 1
+
         # My Body parts as distance from head [2 float]
         for body_part in player.bodies[1:]:
             delta = pr.vector2_subtract(body_part, origin)
@@ -229,6 +233,9 @@ class AIEnv(VecEnv, Server):
                 # Is Boosting [1 float] 0 or 1
                 observations[i] = 1.0 if p.is_boosting() else 0.0
                 i += 1
+                # Can Boost [1 float] 0 or 1
+                observations[i] = 1.0 if p.can_boost() else 0.0
+                i += 1
                 # My Body parts as distance from head [2 float] * 100 normalized using world size
                 for body_part in p.bodies:
                     delta = pr.vector2_subtract(body_part, origin)
@@ -243,6 +250,8 @@ class AIEnv(VecEnv, Server):
                     observations[i] = 0
                     i += 1
             else:
+                observations[i] = 0
+                i += 1
                 observations[i] = 0
                 i += 1
                 observations[i] = 0
@@ -295,7 +304,7 @@ class AIEnv(VecEnv, Server):
         while event is not None:
             if event.type == 0:  # Food Eaten
                 entity_id = event.EntityThatAte
-                mass_eaten = event.MassEaten * 10
+                mass_eaten = event.MassEaten
                 # Food Eating Reward
                 rewards[entity_id] += mass_eaten
             elif event.type == 1:  # Player Killed
@@ -351,6 +360,8 @@ class AIEnv(VecEnv, Server):
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
 
+            rewards[i] = np.clip(rewards[i], -100, 100)
+
         # Max Steps
         self.num_steps += 1
         if self.max_steps != -1 and self.num_steps >= self.max_steps:
@@ -359,22 +370,20 @@ class AIEnv(VecEnv, Server):
                 dones[i] = True
                 infos[i]["terminal_observation"] = observations[i]
 
-                # Reset the world
-                # Delete All the food
-                for entity in self.get_active_world().entities:
-                    if entity.name == "Food":
-                        self.get_active_world().remove_entity(entity)
-
-                for entity in self.get_active_world().entities:
-                    print(entity.name)
-
-                # Spawn new food
-                self.food_spawner.init()
+            observations = self.reset()
 
         return observations, rewards, dones, infos
 
     def reset(self) -> VecEnvObs:
         self.num_steps = 0
+
+        for entity in self.get_active_world().entities:
+            if entity.name == "Food":
+                self.get_active_world().remove_entity(entity)
+
+        # Spawn new food
+        self.food_spawner.init()
+
         for i in range(self.num_players):
             self.reset_player(i)
 

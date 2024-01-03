@@ -24,10 +24,10 @@ class TestRun:
 
 config = {
     "policy_type": "MlpPolicy",
-    "number_of_agents": 32,
-    "food_to_spawn": 0,
-    "world_size": 5000,
-    "total_timesteps": 5000000,
+    "number_of_agents": 10,
+    "food_to_spawn": 50,
+    "world_size": 2500,
+    "total_timesteps": 1_000_000,
     "learning_rate": 3e-4,
     "n_steps": 2048,
     "batch_size": 64,
@@ -42,8 +42,8 @@ config = {
     "policy_kwargs": {
         "activation_fn": th.nn.Tanh,
         "net_arch": {
-            "vf": [128, 128],
-            "pi": [128, 128],
+            "vf": [64, 64],
+            "pi": [64, 64],
         },
     },
 }
@@ -54,7 +54,7 @@ def main():
         AIEnv(
             config["number_of_agents"],
             config["world_size"],
-            12000,
+            4000,
             config["food_to_spawn"],
         )
     )
@@ -62,7 +62,7 @@ def main():
         AIEnv(
             config["number_of_agents"],
             config["world_size"],
-            6000,
+            2000,
             config["food_to_spawn"],
         )
     )
@@ -99,9 +99,9 @@ def main():
         policy_kwargs=config["policy_kwargs"],
     )
 
-    eval_callback = EvalCallback(eval_env, eval_freq=12000)
+    eval_callback = EvalCallback(eval_env, eval_freq=5000)
     checkpoint_callback = CheckpointCallback(
-        save_freq=6000, save_path=f"models/{run.id}"
+        save_freq=5000, save_path=f"models/{run.id}"
     )
 
     if USE_WANDB:

@@ -22,6 +22,7 @@ from Slitherai.Environment.Constants import (
     MIN_BOOST_RADIUS,
     SHRINK_RATE_MULTIPLIER,
     SPEED_CONSTANT,
+    STARTING_RADIUS,
 )
 from Slitherai.Environment.Core.CollisionComponent import CollisionComponent
 from Slitherai.Environment.Core.Component import Component
@@ -37,7 +38,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
         id: int,
         food_spawner: FoodSpawner,
     ) -> None:
-        self.radius = 20
+        self.radius = STARTING_RADIUS
         self.id = id
         self.direction = pr.vector2_normalize(start_direction)
         self.input_dir = self.direction
@@ -59,7 +60,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
         self.color = pr.Color(128, 128, 128, 255)
 
     def reset(self, head_location: pr.Vector2, direction: pr.Vector2):
-        self.radius = 20
+        self.radius = STARTING_RADIUS
         self.direction = pr.vector2_normalize(direction)
         self.input_dir = self.direction
         self.boost_used = False
@@ -222,7 +223,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
             or self.bodies[0].x > self.size
             or self.bodies[0].y < 0
             or self.bodies[0].y > self.size
-        ):
+        ) and not self.is_dead:
             self.KilledEvent(None)
             self.killed()
             self.is_dead = True
