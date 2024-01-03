@@ -57,15 +57,16 @@ class Food(CollisionComponent):
 
 
 class FoodSpawner(Component):
-    def __init__(self, app: Application) -> None:
+    def __init__(self, app: Application, init_food=INITIAL_FOOD_SPAWN) -> None:
         super().__init__()
         self.app = app
         self.random = np.random.default_rng()
+        self.init_food = init_food
 
     def init(self):
         world: GridWorld = self.app.get_active_world()  # type: ignore
         self.size = world.size
-        for _ in range(INITIAL_FOOD_SPAWN):
+        for _ in range(self.init_food):
             x = self.random.integers(0, world.size)
             y = self.random.integers(0, world.size)
             world.add_entity(Entity("Food", [Food(pr.Vector2(x, y), do_draw=IS_DEBUG)]))

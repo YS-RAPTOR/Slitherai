@@ -41,7 +41,10 @@ class World:
     def remove_entity(self, entity: Entity):
         if self.is_active:
             entity.destroy()
-        self.entities.remove(entity)
+        try:
+            self.entities.remove(entity)
+        except Exception:
+            pass
 
     def remove_ui_entity(self, entity: Entity):
         if self.is_active:

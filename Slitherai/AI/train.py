@@ -11,7 +11,7 @@ from wandb.integration.sb3 import WandbCallback
 
 from Slitherai.AI.AIEnv import AIEnv
 
-USE_WANDB = False
+USE_WANDB = True
 
 
 class TestRun:
@@ -24,14 +24,15 @@ class TestRun:
 
 config = {
     "policy_type": "MlpPolicy",
-    "number_of_agents": 25,
-    "world_size": 25000,
+    "number_of_agents": 32,
+    "food_to_spawn": 0,
+    "world_size": 5000,
     "total_timesteps": 5000000,
-    "learning_rate": 3e-5,
+    "learning_rate": 3e-4,
     "n_steps": 2048,
     "batch_size": 64,
     "n_epochs": 10,
-    "gamma": 0.999,
+    "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_range": 0.2,
     "normalize_advantage": True,
@@ -39,18 +40,32 @@ config = {
     "vf_coef": 0.5,
     "max_grad_norm": 0.5,
     "policy_kwargs": {
-        "activation_fn": th.nn.ReLU,
+        "activation_fn": th.nn.Tanh,
         "net_arch": {
-            "vf": [256, 256],
-            "pi": [256, 256],
+            "vf": [128, 128],
+            "pi": [128, 128],
         },
     },
 }
 
 
 def main():
-    env = VecMonitor(AIEnv(config["number_of_agents"], config["world_size"]))
-    eval_env = VecMonitor(AIEnv(config["number_of_agents"], config["world_size"], 7200))
+    env = VecMonitor(
+        AIEnv(
+            config["number_of_agents"],
+            config["world_size"],
+            12000,
+            config["food_to_spawn"],
+        )
+    )
+    eval_env = VecMonitor(
+        AIEnv(
+            config["number_of_agents"],
+            config["world_size"],
+            6000,
+            config["food_to_spawn"],
+        )
+    )
 
     if USE_WANDB:
         run = wandb.init(
@@ -84,9 +99,9 @@ def main():
         policy_kwargs=config["policy_kwargs"],
     )
 
-    eval_callback = EvalCallback(eval_env, eval_freq=2500)
+    eval_callback = EvalCallback(eval_env, eval_freq=12000)
     checkpoint_callback = CheckpointCallback(
-        save_freq=2500, save_path=f"models/{run.id}"
+        save_freq=6000, save_path=f"models/{run.id}"
     )
 
     if USE_WANDB:

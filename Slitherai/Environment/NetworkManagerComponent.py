@@ -117,7 +117,7 @@ class ServerNetworkManager(Component):
     def handle_disconnections(self, client_address: Tuple[str, int]):
         try:
             component = self.clients.pop(client_address)
-            self.app.get_active_world().remove_entity(component.get_entity())
+            self.app.get_active_world().queue_entity_removal(component.get_entity())
             print(f"Disconnected from {client_address}")
         except Exception:
             return

@@ -11,6 +11,7 @@ from stable_baselines3.common.vec_env.base_vec_env import (
 )
 
 from Slitherai.Environment.Constants import (
+    INITIAL_FOOD_SPAWN,
     MAX_LENGTH,
     MIN_BOOST_RADIUS,
     OPTIMAL_RESOLUTION_WIDTH,
@@ -36,6 +37,7 @@ class AIEnv(VecEnv, Server):
         num_players: int,
         world_size: int = 50000,
         max_steps: int = -1,
+        initial_food_spawn: int = INITIAL_FOOD_SPAWN,
         frame_rate=20,
     ):
         # Variables
@@ -50,14 +52,14 @@ class AIEnv(VecEnv, Server):
         world = GridWorld(self.world_size, 50)
 
         # Initialize manager
-        food_spawner = FoodSpawner(self)
-        self.manager_entity = Entity("Manager", [food_spawner])
+        self.food_spawner = FoodSpawner(self, initial_food_spawn)
+        self.manager_entity = Entity("Manager", [self.food_spawner])
         world.add_entity(self.manager_entity)
 
         # Initialize Players
         self.players = [
             ServerSnakeBodyComponent(
-                pr.Vector2(0, 0), pr.Vector2(0, 0), i, food_spawner
+                pr.Vector2(0, 0), pr.Vector2(0, 0), i, self.food_spawner
             )
             for i in range(self.num_players)
         ]
@@ -74,6 +76,13 @@ class AIEnv(VecEnv, Server):
         # Track Timeout
         self.max_steps = max_steps
         self.num_steps = 0
+
+        # Reward Stuff
+        self.closest_food = [100000.0 for _ in range(num_players)]
+
+        # Full Reset Time
+        self.num_resets = 0
+        self.max_resets = 1000
 
         super().__init__(
             num_players,
@@ -248,6 +257,15 @@ class AIEnv(VecEnv, Server):
                     observations[i] = 0
                     i += 1
         # Total Floats 2020
+
+        # Closest Food Distance [1 float]
+        if foods[0] is not None:
+            self.closest_food[player.id] = pr.vector_2distance_sqr(
+                foods[0].bodies[0], origin
+            )
+        else:
+            self.closest_food[player.id] = 100000.0
+
         if i != OBSERVATION_SIZE:
             raise Exception("Observation size is not 2319")
         return observations  # Full Total Floats 2319
@@ -277,7 +295,7 @@ class AIEnv(VecEnv, Server):
         while event is not None:
             if event.type == 0:  # Food Eaten
                 entity_id = event.EntityThatAte
-                mass_eaten = event.MassEaten
+                mass_eaten = event.MassEaten * 10
                 # Food Eating Reward
                 rewards[entity_id] += mass_eaten
             elif event.type == 1:  # Player Killed
@@ -286,14 +304,14 @@ class AIEnv(VecEnv, Server):
 
                 if killer_id is None:
                     # Killed by border reward
-                    rewards[entity_id] -= 10
+                    rewards[entity_id] -= 100
                 else:
                     # Killed by other player reward. Also, if killed by smaller player, give bigger punishment
                     rewards[entity_id] -= np.max(
                         [
                             self.players[entity_id].radius
                             - self.players[killer_id].radius,
-                            1,
+                            20,
                         ]
                     )
 
@@ -312,7 +330,10 @@ class AIEnv(VecEnv, Server):
 
                 # Kill reward. If killed bigger player, give bigger reward
                 rewards[entity_id] += np.max(
-                    [self.players[killed_id].radius - self.players[entity_id].radius, 1]
+                    [
+                        self.players[killed_id].radius - self.players[entity_id].radius,
+                        20,
+                    ]
                 )
 
             event = self.get_active_world().consume_event()
@@ -321,6 +342,11 @@ class AIEnv(VecEnv, Server):
         for i in range(self.num_players):
             # Size reward
             rewards[i] += self.players[i].length() / MAX_LENGTH
+
+            # Getting closer to food reward
+            dist_to_food_norm = self.closest_food[i] / 3000
+            rewards[i] += 5 * (1 - dist_to_food_norm)
+
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
@@ -332,6 +358,18 @@ class AIEnv(VecEnv, Server):
                 infos[i]["TimeLimit.truncated"] = True and not dones[i]
                 dones[i] = True
                 infos[i]["terminal_observation"] = observations[i]
+
+                # Reset the world
+                # Delete All the food
+                for entity in self.get_active_world().entities:
+                    if entity.name == "Food":
+                        self.get_active_world().remove_entity(entity)
+
+                for entity in self.get_active_world().entities:
+                    print(entity.name)
+
+                # Spawn new food
+                self.food_spawner.init()
 
         return observations, rewards, dones, infos
 
@@ -345,6 +383,8 @@ class AIEnv(VecEnv, Server):
         return np.array([self.get_observations(player) for player in self.players])
 
     def reset_player(self, player_id: int, dead=False) -> None:
+        # Delete all the food and spawn new food
+
         location = pr.Vector2(
             np.random.randint(0, self.world_size), np.random.randint(0, self.world_size)
         )

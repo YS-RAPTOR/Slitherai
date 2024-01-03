@@ -2,7 +2,12 @@ from typing import List
 
 import numpy as np
 import pyray as pr
-from typing_extensions import Self
+import sys
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from Slitherai.Environment.Constants import (
     BOOST_DROP_RATE,
@@ -220,6 +225,7 @@ class ServerSnakeBodyComponent(CollisionComponent):
         ):
             self.KilledEvent(None)
             self.killed()
+            self.is_dead = True
 
     def draw(self, camera: pr.Camera2D) -> None:
         for part in self.bodies:

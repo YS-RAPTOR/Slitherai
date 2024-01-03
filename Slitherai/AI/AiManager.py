@@ -136,6 +136,12 @@ class AiManager(Component):
         else:
             foods += [None for _ in range(CLOSEST_FOODS - len(foods))]
 
+        # Remove self
+        for index in range(len(players)):
+            if players[index].id == player.id:  # type: ignore
+                players.pop(index)
+                break
+
         if len(players) > CLOSEST_PLAYERS:
             players = sorted(
                 players,
@@ -168,7 +174,7 @@ class AiManager(Component):
 
         # 10 Closest Player Information
         for p in players:
-            if p is not None and p.id != player.id:
+            if p is not None:
                 # My radius [1 float]
                 observations[i] = p.radius
                 i += 1
