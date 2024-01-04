@@ -195,7 +195,11 @@ class ServerSnakeBodyComponent(CollisionComponent):
             self.bodies[0],
         )
 
-        self.shrink(self.radius * SHRINK_RATE_MULTIPLIER * delta_time)
+        self.shrink(
+            np.max([self.radius - STARTING_RADIUS, 0])
+            * SHRINK_RATE_MULTIPLIER
+            * delta_time
+        )
         if self.is_boosting():
             self.shrink(BOOST_SHRINK_RATE * delta_time)
             self.boost_food += BOOST_SHRINK_RATE * BOOST_DROP_RATE * delta_time

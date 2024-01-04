@@ -75,7 +75,11 @@ class AIEnv(VecEnv, Server):
 
         # Track Timeout
         self.max_steps = max_steps
-        self.num_steps = 0
+        self.num_steps = [0 for _ in range(self.num_players)]
+
+        # Food Reset
+        self.reset_food_every = 25
+        self.num_resets = 0
 
         # Reward Stuff
         self.closest_food = [100000.0 for _ in range(num_players)]
@@ -178,7 +182,7 @@ class AIEnv(VecEnv, Server):
         if len(foods) > CLOSEST_FOODS:
             foods = sorted(
                 foods,
-                key=lambda food: pr.vector_2distance_sqr(food.bodies[0], origin),  # type: ignore
+                key=lambda food: pr.vector_2distance(food.bodies[0], origin),  # type: ignore
             )[:CLOSEST_FOODS]
         else:
             foods += [None for _ in range(CLOSEST_FOODS - len(foods))]
@@ -192,7 +196,7 @@ class AIEnv(VecEnv, Server):
         if len(players) > CLOSEST_PLAYERS:
             players = sorted(
                 players,
-                key=lambda player: pr.vector_2distance_sqr(player.bodies[0], origin),  # type: ignore
+                key=lambda player: pr.vector_2distance(player.bodies[0], origin),  # type: ignore
             )[:CLOSEST_PLAYERS]
         else:
             players += [None for _ in range(CLOSEST_PLAYERS - len(players))]
@@ -269,7 +273,7 @@ class AIEnv(VecEnv, Server):
 
         # Closest Food Distance [1 float]
         if foods[0] is not None:
-            self.closest_food[player.id] = pr.vector_2distance_sqr(
+            self.closest_food[player.id] = pr.vector_2distance(
                 foods[0].bodies[0], origin
             )
         else:
@@ -320,7 +324,7 @@ class AIEnv(VecEnv, Server):
                         [
                             self.players[entity_id].radius
                             - self.players[killer_id].radius,
-                            20,
+                            10,
                         ]
                     )
 
@@ -341,42 +345,37 @@ class AIEnv(VecEnv, Server):
                 rewards[entity_id] += np.max(
                     [
                         self.players[killed_id].radius - self.players[entity_id].radius,
-                        20,
+                        10,
                     ]
                 )
-
             event = self.get_active_world().consume_event()
 
-        # Other rewards
+        # Misc
         for i in range(self.num_players):
-            # Size reward
-            rewards[i] += self.players[i].length() / MAX_LENGTH
+            if not dones[i]:
+                # Size reward
 
-            # Getting closer to food reward
-            dist_to_food_norm = self.closest_food[i] / 3000
-            rewards[i] += 5 * (1 - dist_to_food_norm)
+                rewards[i] += (self.players[i].length() / MAX_LENGTH) * 10
+
+                # Getting closer to food reward
+                dist_to_food_norm = self.closest_food[i] / 3000
+                rewards[i] += 5 * (1 - dist_to_food_norm)
 
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
 
-            rewards[i] = np.clip(rewards[i], -100, 100)
-
-        # Max Steps
-        self.num_steps += 1
-        if self.max_steps != -1 and self.num_steps >= self.max_steps:
-            for i in range(self.num_players):
+            self.num_steps[i] += 1
+            # Max Steps
+            if self.max_steps != -1 and self.num_steps[i] >= self.max_steps:
                 infos[i]["TimeLimit.truncated"] = True and not dones[i]
                 dones[i] = True
                 infos[i]["terminal_observation"] = observations[i]
-
-            observations = self.reset()
+                observations[i] = self.reset_player(i)
 
         return observations, rewards, dones, infos
 
-    def reset(self) -> VecEnvObs:
-        self.num_steps = 0
-
+    def reset_food(self):
         for entity in self.get_active_world().entities:
             if entity.name == "Food":
                 self.get_active_world().remove_entity(entity)
@@ -384,8 +383,15 @@ class AIEnv(VecEnv, Server):
         # Spawn new food
         self.food_spawner.init()
 
+    def reset(self) -> VecEnvObs:
+        self.num_steps = [0 for _ in range(self.num_players)]
+        self.num_resets = 0
+
+        self.reset_food()
         for i in range(self.num_players):
             self.reset_player(i)
+
+        self.num_resets = 0
 
         # Get Active world returns world. What is stored is GridWorld
         self.get_active_world().update_grid()  # type: ignore
@@ -393,6 +399,11 @@ class AIEnv(VecEnv, Server):
 
     def reset_player(self, player_id: int, dead=False) -> None:
         # Delete all the food and spawn new food
+        self.num_steps[player_id] = 0
+        self.num_resets += 1
+        if self.num_resets >= self.reset_food_every:
+            self.num_resets = 0
+            self.reset_food()
 
         location = pr.Vector2(
             np.random.randint(0, self.world_size), np.random.randint(0, self.world_size)

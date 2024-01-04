@@ -4,9 +4,11 @@ from stable_baselines3.common.callbacks import (
     EvalCallback,
 )
 import torch as th
+from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
 import wandb
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
+from stable_baselines3.common.vec_env.vec_normalize import VecNormalize
 from wandb.integration.sb3 import WandbCallback
 
 from Slitherai.AI.AIEnv import AIEnv
@@ -25,46 +27,51 @@ class TestRun:
 config = {
     "policy_type": "MlpPolicy",
     "number_of_agents": 10,
-    "food_to_spawn": 50,
-    "world_size": 2500,
-    "total_timesteps": 1_000_000,
-    "learning_rate": 3e-4,
+    "world_size": 7500,
+    "food_to_spawn": 100,
+    "total_timesteps": 10_000_000,
+    "learning_rate": 3e-3,
     "n_steps": 2048,
     "batch_size": 64,
     "n_epochs": 10,
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_range": 0.2,
-    "normalize_advantage": True,
     "ent_coef": 0.0,
     "vf_coef": 0.5,
     "max_grad_norm": 0.5,
     "policy_kwargs": {
-        "activation_fn": th.nn.Tanh,
+        "activation_fn": th.nn.ReLU,
         "net_arch": {
-            "vf": [64, 64],
-            "pi": [64, 64],
+            "vf": [256, 256],
+            "pi": [256, 256],
         },
     },
 }
 
 
 def main():
-    env = VecMonitor(
-        AIEnv(
-            config["number_of_agents"],
-            config["world_size"],
-            4000,
-            config["food_to_spawn"],
-        )
+    env = VecNormalize(
+        VecMonitor(
+            AIEnv(
+                config["number_of_agents"],
+                config["world_size"],
+                6000,
+                config["food_to_spawn"],
+            )
+        ),
+        clip_obs=OPTIMAL_RESOLUTION_WIDTH,
     )
-    eval_env = VecMonitor(
-        AIEnv(
-            config["number_of_agents"],
-            config["world_size"],
-            2000,
-            config["food_to_spawn"],
-        )
+    eval_env = VecNormalize(
+        VecMonitor(
+            AIEnv(
+                config["number_of_agents"] // 2,
+                config["world_size"] // 2,
+                1500,
+                config["food_to_spawn"] // 2,
+            )
+        ),
+        clip_obs=OPTIMAL_RESOLUTION_WIDTH,
     )
 
     if USE_WANDB:
@@ -90,7 +97,6 @@ def main():
         gamma=config["gamma"],
         gae_lambda=config["gae_lambda"],
         clip_range=config["clip_range"],
-        normalize_advantage=config["normalize_advantage"],
         ent_coef=config["ent_coef"],
         vf_coef=config["vf_coef"],
         max_grad_norm=config["max_grad_norm"],
@@ -99,38 +105,45 @@ def main():
         policy_kwargs=config["policy_kwargs"],
     )
 
-    eval_callback = EvalCallback(eval_env, eval_freq=5000)
+    eval_callback = EvalCallback(eval_env, eval_freq=10000)
     checkpoint_callback = CheckpointCallback(
         save_freq=5000, save_path=f"models/{run.id}"
     )
 
-    if USE_WANDB:
-        wandb_callback = WandbCallback(
-            gradient_save_freq=500,
-            model_save_path=f"models/{run.id}",
-            model_save_freq=500,
-            verbose=2,
-        )
-        callbaks = CallbackList([eval_callback, wandb_callback, checkpoint_callback])
+    import os
 
-        model.learn(
-            total_timesteps=config["total_timesteps"],
-            progress_bar=True,
-            callback=callbaks,
-        )
-        run.finish()
+    os.makedirs("models/finished", exist_ok=True)
 
-        import os
+    try:
+        if USE_WANDB:
+            wandb_callback = WandbCallback(
+                gradient_save_freq=500,
+                model_save_path=f"models/{run.id}",
+                model_save_freq=500,
+                verbose=2,
+            )
+            callbaks = CallbackList(
+                [eval_callback, wandb_callback, checkpoint_callback]
+            )
 
-        os.makedirs("models/finished", exist_ok=True)
-        model.save(f"models/finished/{run.id}")
-    else:
-        callbaks = CallbackList([eval_callback, checkpoint_callback])
-        model.learn(
-            total_timesteps=config["total_timesteps"],
-            progress_bar=True,
-            callback=callbaks,
-        )
+            model.learn(
+                total_timesteps=config["total_timesteps"],
+                progress_bar=True,
+                callback=callbaks,
+            )
+            run.finish()
+        else:
+            callbaks = CallbackList([eval_callback, checkpoint_callback])
+            model.learn(
+                total_timesteps=config["total_timesteps"],
+                progress_bar=True,
+                callback=callbaks,
+            )
+    except KeyboardInterrupt:
+        pass
+
+    model.save(f"models/finished/{run.id}")
+    env.save(f"models/finished/{run.id}-vec_normalize")
 
 
 if __name__ == "__main__":

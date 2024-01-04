@@ -1,0 +1,53 @@
+Number of finished trials:  33
+Best trial:
+  Value:  -310.6081237792969
+  Params:
+    batch_size: 512
+    n_steps: 2048
+    gamma: 0.995
+    learning_rate: 0.6754957095662276
+    ent_coef: 1.2180173204031782e-05
+    clip_range: 0.4
+    n_epochs: 20
+    gae_lambda: 0.99
+    max_grad_norm: 5
+    vf_coef: 0.12776273510127314
+    net_arch: medium
+    ortho_init: False
+    activation_fn: relu
+  User attrs:
+
+Best trial:
+  Value:  -311.111328125
+  Params:
+    batch_size: 64
+    n_steps: 2048
+    gamma: 0.995
+    learning_rate: 0.5077067766640514
+    ent_coef: 0.0012371256094725678
+    clip_range: 0.4
+    n_epochs: 20
+    gae_lambda: 0.9
+    max_grad_norm: 0.3
+    vf_coef: 0.12919500634409883
+    net_arch: medium
+    ortho_init: True
+    activation_fn: relu
+
+Best trial:
+  Value:  -5.222810745239258
+  Params:
+    batch_size: 32
+    n_steps: 2048
+    gamma: 0.999
+    learning_rate: 0.010904496287854684
+    ent_coef: 0.001259977671000268
+    clip_range: 0.4
+    n_epochs: 10
+    gae_lambda: 0.9
+    max_grad_norm: 0.9
+    vf_coef: 0.6721595298476187
+    net_arch: tiny
+    ortho_init: False
+    activation_fn: relu
+  User attrs:
