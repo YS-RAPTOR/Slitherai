@@ -9,6 +9,7 @@ from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 from torch import nn as nn
 
 from Slitherai.AI.AIEnv import AIEnv
+from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
 
 
 # Taken from rl-baselines3-zoo[https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/rl_zoo3/hyperparams_opt.py]
@@ -75,6 +76,7 @@ def sample_ppo_params(trial: optuna.Trial) -> Dict[str, Any]:
         ),
     }
 
+
 N_TRIALS = 200
 N_STARTUP_TRIALS = 1
 N_EVALUATIONS = 2
@@ -130,10 +132,11 @@ def objective(trial: optuna.Trial) -> float:
     # Sample hyperparameters.
     kwargs.update(sample_ppo_params(trial))
     # Create the RL model.
-    env = VecMonitor(AIEnv(N_AGENTS, 5_000, 4000, 500))
+    env = VecMonitor(AIEnv(N_AGENTS, 7500, 6000, 50))
     model = PPO(**kwargs, env=env)
     # Create env used for evaluation.
-    eval_env = VecMonitor(AIEnv(N_AGENTS, 5_000, 2000, 500))
+    eval_env = VecMonitor(AIEnv(N_AGENTS, 7500, 1500, 50))
+
     # Create the callback that will periodically evaluate and report the performance.
     eval_callback = TrialEvalCallback(
         eval_env,
@@ -141,13 +144,13 @@ def objective(trial: optuna.Trial) -> float:
         n_eval_episodes=N_EVAL_EPISODES,
         eval_freq=EVAL_FREQ,
         deterministic=True,
-        verbose=1
+        verbose=1,
     )
 
     nan_encountered = False
     try:
         model.learn(N_TIMESTEPS, callback=eval_callback)
-    except AssertionError as e:
+    except Exception as e:
         # Sometimes, random hyperparams can generate NaN.
         print(e)
         nan_encountered = True

@@ -9,7 +9,6 @@ from stable_baselines3.common.vec_env.base_vec_env import (
     VecEnvObs,
     VecEnvStepReturn,
 )
-
 from Slitherai.Environment.Constants import (
     INITIAL_FOOD_SPAWN,
     MAX_LENGTH,
@@ -82,7 +81,7 @@ class AIEnv(VecEnv, Server):
         self.num_resets = 0
 
         # Reward Stuff
-        self.closest_food = [100000.0 for _ in range(num_players)]
+        self.closest_food = [(-1.0, 0.0) for _ in range(num_players)]
 
         # Full Reset Time
         self.num_resets = 0
@@ -273,11 +272,12 @@ class AIEnv(VecEnv, Server):
 
         # Closest Food Distance [1 float]
         if foods[0] is not None:
-            self.closest_food[player.id] = pr.vector_2distance(
-                foods[0].bodies[0], origin
+            self.closest_food[player.id] = (
+                pr.vector_2distance(foods[0].bodies[0], origin),
+                foods[0].mass,
             )
         else:
-            self.closest_food[player.id] = 100000.0
+            self.closest_food[player.id] = (-1.0, 0.0)
 
         if i != OBSERVATION_SIZE:
             raise Exception("Observation size is not 2319")
@@ -310,14 +310,14 @@ class AIEnv(VecEnv, Server):
                 entity_id = event.EntityThatAte
                 mass_eaten = event.MassEaten
                 # Food Eating Reward
-                rewards[entity_id] += mass_eaten
+                rewards[entity_id] += mass_eaten * 5
             elif event.type == 1:  # Player Killed
                 entity_id = event.EntityKilled
                 killer_id = event.KilledBy
 
                 if killer_id is None:
                     # Killed by border reward
-                    rewards[entity_id] -= 100
+                    rewards[entity_id] -= 1000
                 else:
                     # Killed by other player reward. Also, if killed by smaller player, give bigger punishment
                     rewards[entity_id] -= np.max(
@@ -354,12 +354,16 @@ class AIEnv(VecEnv, Server):
         for i in range(self.num_players):
             if not dones[i]:
                 # Size reward
-
-                rewards[i] += (self.players[i].length() / MAX_LENGTH) * 10
+                # rewards[i] += (self.players[i].length() / MAX_LENGTH) * 20
 
                 # Getting closer to food reward
-                dist_to_food_norm = self.closest_food[i] / 3000
-                rewards[i] += 5 * (1 - dist_to_food_norm)
+                dist_to_food_norm = self.closest_food[i][0] / 3000
+
+                # If no food, then no reward
+                if dist_to_food_norm > 0:
+                    rewards[i] += np.max([2, self.closest_food[i][1]]) * (
+                        1 - dist_to_food_norm
+                    )
 
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
@@ -386,6 +390,7 @@ class AIEnv(VecEnv, Server):
     def reset(self) -> VecEnvObs:
         self.num_steps = [0 for _ in range(self.num_players)]
         self.num_resets = 0
+        self.closest_food = [(-1.0, 0.0) for _ in range(self.num_players)]
 
         self.reset_food()
         for i in range(self.num_players):
@@ -400,6 +405,7 @@ class AIEnv(VecEnv, Server):
     def reset_player(self, player_id: int, dead=False) -> None:
         # Delete all the food and spawn new food
         self.num_steps[player_id] = 0
+        self.closest_food[player_id] = (-1.0, 0.0)
         self.num_resets += 1
         if self.num_resets >= self.reset_food_every:
             self.num_resets = 0

@@ -68,7 +68,9 @@ class Server(Application):
 if __name__ == "__main__":
     # Initialize the client
     GUI = True
-    WORLD_SIZE = 10000
+    WORLD_SIZE = 7500
+    NUM_AGENTS = 10
+    FOOD_TO_SPAWN = 50
     server = Server("Slitherai", 60, GUI)
     if GUI:
         center = pr.Vector2(server.width / 2, server.height / 2)
@@ -76,14 +78,16 @@ if __name__ == "__main__":
         server.init_camera(camera)
 
     # Initialize the world
-    food_spawner = FoodSpawner(server)
+    food_spawner = FoodSpawner(server, FOOD_TO_SPAWN)
     if GUI:
         manager = Entity(
             "Manager",
             [
                 ServerCameraComponent(server),
                 ServerNetworkManager(server.host, server.port, server),
-                AiManager(server, "./models/finished/pmjes7m7", food_spawner, 10),
+                AiManager(
+                    server, "./models/finished/pmjes7m7", food_spawner, NUM_AGENTS
+                ),
                 food_spawner,
             ],
         )

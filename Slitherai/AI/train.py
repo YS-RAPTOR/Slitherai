@@ -4,11 +4,9 @@ from stable_baselines3.common.callbacks import (
     EvalCallback,
 )
 import torch as th
-from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
 import wandb
-from stable_baselines3 import PPO
+from stable_baselines3 import A2C
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
-from stable_baselines3.common.vec_env.vec_normalize import VecNormalize
 from wandb.integration.sb3 import WandbCallback
 
 from Slitherai.AI.AIEnv import AIEnv
@@ -28,18 +26,17 @@ config = {
     "policy_type": "MlpPolicy",
     "number_of_agents": 10,
     "world_size": 7500,
-    "food_to_spawn": 100,
-    "total_timesteps": 10_000_000,
-    "learning_rate": 3e-3,
-    "n_steps": 2048,
-    "batch_size": 64,
-    "n_epochs": 10,
+    "food_to_spawn": 50,
+    "total_timesteps": 1_000_000,
+    "learning_rate": 7e-4,
+    "n_steps": 5,
     "gamma": 0.99,
-    "gae_lambda": 0.95,
-    "clip_range": 0.2,
+    "gae_lambda": 1.0,
     "ent_coef": 0.0,
     "vf_coef": 0.5,
     "max_grad_norm": 0.5,
+    "rms_prop_eps": 1e-5,
+    "use_rms_prop": True,
     "policy_kwargs": {
         "activation_fn": th.nn.ReLU,
         "net_arch": {
@@ -51,27 +48,21 @@ config = {
 
 
 def main():
-    env = VecNormalize(
-        VecMonitor(
-            AIEnv(
-                config["number_of_agents"],
-                config["world_size"],
-                6000,
-                config["food_to_spawn"],
-            )
-        ),
-        clip_obs=OPTIMAL_RESOLUTION_WIDTH,
+    env = VecMonitor(
+        AIEnv(
+            config["number_of_agents"],
+            config["world_size"],
+            6000,
+            config["food_to_spawn"],
+        )
     )
-    eval_env = VecNormalize(
-        VecMonitor(
-            AIEnv(
-                config["number_of_agents"] // 2,
-                config["world_size"] // 2,
-                1500,
-                config["food_to_spawn"] // 2,
-            )
-        ),
-        clip_obs=OPTIMAL_RESOLUTION_WIDTH,
+    eval_env = VecMonitor(
+        AIEnv(
+            config["number_of_agents"] // 2,
+            config["world_size"] // 2,
+            1500,
+            config["food_to_spawn"] // 2,
+        )
     )
 
     if USE_WANDB:
@@ -86,20 +77,19 @@ def main():
     else:
         run = TestRun("test")
 
-    model = PPO(
+    model = A2C(
         config["policy_type"],
         env,
         verbose=1,
         learning_rate=config["learning_rate"],
         n_steps=config["n_steps"],
-        batch_size=config["batch_size"],
-        n_epochs=config["n_epochs"],
         gamma=config["gamma"],
         gae_lambda=config["gae_lambda"],
-        clip_range=config["clip_range"],
         ent_coef=config["ent_coef"],
         vf_coef=config["vf_coef"],
         max_grad_norm=config["max_grad_norm"],
+        rms_prop_eps=config["rms_prop_eps"],
+        use_rms_prop=config["use_rms_prop"],
         tensorboard_log=f"runs/{run.id}",
         device="cuda",
         policy_kwargs=config["policy_kwargs"],
