@@ -76,6 +76,10 @@ class AiManager(Component):
         observations[i] = 1.0 if player.is_boosting() else 0.0
         i += 1
 
+        # Can Boost [1 float] 0 or 1
+        observations[i] = 1.0 if player.can_boost() else 0.0
+        i += 1
+
         # My Body parts as distance from head [2 float]
         for body_part in player.bodies[1:]:
             delta = pr.vector2_subtract(body_part, origin)
@@ -186,6 +190,9 @@ class AiManager(Component):
                 # Is Boosting [1 float] 0 or 1
                 observations[i] = 1.0 if p.is_boosting() else 0.0
                 i += 1
+                # Can Boost [1 float] 0 or 1
+                observations[i] = 1.0 if p.can_boost() else 0.0
+                i += 1
                 # My Body parts as distance from head [2 float] * 100 normalized using world size
                 for body_part in p.bodies:
                     delta = pr.vector2_subtract(body_part, origin)
@@ -208,12 +215,15 @@ class AiManager(Component):
                 i += 1
                 observations[i] = 0
                 i += 1
+                observations[i] = 0
+                i += 1
                 for _ in range(MAX_LENGTH):
                     observations[i] = 0
                     i += 1
                     observations[i] = 0
                     i += 1
         # Total Floats 2020
+
         if i != OBSERVATION_SIZE:
             raise Exception("Observation size is not 2319")
         return observations  # Full Total Floats 2319
