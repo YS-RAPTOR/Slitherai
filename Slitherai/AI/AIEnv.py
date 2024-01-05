@@ -365,7 +365,11 @@ class AIEnv(VecEnv, Server):
                     angle = pr.vector_2dot_product(
                         self.players[i].direction, self.closest_food[i][2]
                     )
-                    rewards[i] += angle * (1 - dist_to_food_norm) * 5
+                    rewards[i] += (
+                        angle
+                        * (1 - dist_to_food_norm)
+                        * np.max([5, self.closest_food[i][1]])
+                    )
 
                 # Center distance reward
                 center_dist = pr.vector_2distance(

@@ -72,12 +72,12 @@ class AiManager(Component):
         observations[i] = player.direction.y
         i += 1
 
-        # Is Boosting [1 float] 0 or 1
-        observations[i] = 1.0 if player.is_boosting() else 0.0
+        # Is Boosting [1 float] -1 or 1
+        observations[i] = 1.0 if player.is_boosting() else -1
         i += 1
 
-        # Can Boost [1 float] 0 or 1
-        observations[i] = 1.0 if player.can_boost() else 0.0
+        # Can Boost [1 float] -1 or 1
+        observations[i] = 1.0 if player.can_boost() else -1
         i += 1
 
         # My Body parts as distance from head [2 float]
@@ -99,16 +99,13 @@ class AiManager(Component):
 
         # Environment Observations
         # Closest Distance to Edge [2 floats] normalized using world_size
-        if origin.x > self.world_size / 2:
-            observations[i] = (self.world_size - origin.x) / self.world_size
-        else:
-            observations[i] = (-origin.x) / self.world_size
+        observations[i] = (self.world_size - origin.x) / self.world_size
         i += 1
-
-        if origin.y > self.world_size / 2:
-            observations[i] = (self.world_size - origin.y) / self.world_size
-        else:
-            observations[i] = (-origin.y) / self.world_size
+        observations[i] = (self.world_size - origin.y) / self.world_size
+        i += 1
+        observations[i] = (-origin.x) / self.world_size
+        i += 1
+        observations[i] = (-origin.y) / self.world_size
         i += 1
 
         # Food and Player Observations
@@ -135,7 +132,7 @@ class AiManager(Component):
         if len(foods) > CLOSEST_FOODS:
             foods = sorted(
                 foods,
-                key=lambda food: pr.vector_2distance_sqr(food.bodies[0], origin),  # type: ignore
+                key=lambda food: pr.vector_2distance(food.bodies[0], origin),  # type: ignore
             )[:CLOSEST_FOODS]
         else:
             foods += [None for _ in range(CLOSEST_FOODS - len(foods))]
@@ -149,7 +146,7 @@ class AiManager(Component):
         if len(players) > CLOSEST_PLAYERS:
             players = sorted(
                 players,
-                key=lambda player: pr.vector_2distance_sqr(player.bodies[0], origin),  # type: ignore
+                key=lambda player: pr.vector_2distance(player.bodies[0], origin),  # type: ignore
             )[:CLOSEST_PLAYERS]
         else:
             players += [None for _ in range(CLOSEST_PLAYERS - len(players))]
@@ -187,11 +184,11 @@ class AiManager(Component):
                 i += 1
                 observations[i] = p.direction.y
                 i += 1
-                # Is Boosting [1 float] 0 or 1
-                observations[i] = 1.0 if p.is_boosting() else 0.0
+                # Is Boosting [1 float] -1 or 1
+                observations[i] = 1.0 if p.is_boosting() else -1
                 i += 1
-                # Can Boost [1 float] 0 or 1
-                observations[i] = 1.0 if p.can_boost() else 0.0
+                # Can Boost [1 float] -1 or 1
+                observations[i] = 1.0 if p.can_boost() else -1
                 i += 1
                 # My Body parts as distance from head [2 float] * 100 normalized using world size
                 for body_part in p.bodies:
@@ -226,6 +223,11 @@ class AiManager(Component):
 
         if i != OBSERVATION_SIZE:
             raise Exception("Observation size is not 2319")
+
+        # Check if finite
+        if not np.isfinite(observations).all():
+            raise Exception("Observation is not finite")
+
         return observations  # Full Total Floats 2319
 
     def get_actions(self, action: np.ndarray):
