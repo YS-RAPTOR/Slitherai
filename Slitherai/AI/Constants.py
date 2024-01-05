@@ -1,7 +1,7 @@
 from Slitherai.Environment.Constants import MAX_LENGTH
 
 CLOSEST_FOODS = 5
-CLOSEST_PLAYERS = 3
+CLOSEST_PLAYERS = 0
 OBSERVATION_SIZE = (
     (MAX_LENGTH - 1) * 2
     + 7

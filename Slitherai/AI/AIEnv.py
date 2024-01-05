@@ -310,14 +310,14 @@ class AIEnv(VecEnv, Server):
                 entity_id = event.EntityThatAte
                 mass_eaten = event.MassEaten
                 # Food Eating Reward
-                rewards[entity_id] += mass_eaten * 5
+                rewards[entity_id] += mass_eaten * 20
             elif event.type == 1:  # Player Killed
                 entity_id = event.EntityKilled
                 killer_id = event.KilledBy
 
                 if killer_id is None:
                     # Killed by border reward
-                    rewards[entity_id] -= 5000
+                    rewards[entity_id] -= 500
                 else:
                     # Killed by other player reward. Also, if killed by smaller player, give bigger punishment
                     rewards[entity_id] -= np.max(
@@ -353,7 +353,7 @@ class AIEnv(VecEnv, Server):
         for i in range(self.num_players):
             if not dones[i]:
                 # Size reward
-                rewards[i] += (self.players[i].length() / MAX_LENGTH) * 20
+                rewards[i] += (self.players[i].length() / MAX_LENGTH) * 50
 
                 # Getting closer to food reward and facing the direction of the food
                 dist_to_food_norm = self.closest_food[i][0] / 3000
@@ -363,19 +363,8 @@ class AIEnv(VecEnv, Server):
                     angle = pr.vector_2dot_product(
                         self.players[i].direction, self.closest_food[i][2]
                     )
-                    rewards[i] += angle * (1 - dist_to_food_norm) * 5
+                    rewards[i] += angle * (1 - dist_to_food_norm) * 10
 
-                # Close to Center reward
-                # total_dist = np.sqrt(2 * (self.world_size**2))
-                # center_dist = (
-                #     pr.vector_2distance(
-                #         self.players[i].bodies[0],
-                #         pr.Vector2(self.world_size // 2, self.world_size // 2),
-                #     )
-                #     / total_dist
-                # )
-                #
-                # rewards[i] -= 0 if center_dist < total_dist * 0.5 else center_dist * 100
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius

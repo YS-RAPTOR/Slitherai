@@ -50,20 +50,22 @@ class TestRun:
 # }
 
 config = {
+    # World
+    "total_timesteps": 1_000_000,
+    "number_of_agents": 1,
+    "world_size": 5000,
+    "food_to_spawn": 250,
+    "max_resets": 1,
+    # Algorithm
     "policy_type": "MlpPolicy",
-    "total_timesteps": 10_000_000,
-    "number_of_agents": 5,
-    "world_size": 7500,
-    "food_to_spawn": 50,
-    "max_resets": 10,
     "gamma": 0.995,
     "normalize_advantage": True,
     "max_grad_norm": 0.5,
     "use_rms_prop": True,
     "gae_lambda": 1.0,
     "n_steps": 128,
-    "learning_rate": 5e-05,
-    "ent_coef": 0.01,
+    "learning_rate": 0.01,
+    "ent_coef": 0.1,
     "vf_coef": 0.75,
     "policy_kwargs": {
         "activation_fn": th.nn.ReLU,
@@ -120,6 +122,8 @@ def main():
         verbose=1,
         tensorboard_log=f"runs/{run.id}",
         device="cuda",
+        # ent_coef=config["ent_coef"],
+        # learning_rate=config["learning_rate"],
         policy_kwargs=config["policy_kwargs"],
     )
 
