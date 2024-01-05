@@ -105,3 +105,35 @@ Trial 11 finished with value: 3031.8056640625 and parameters: {
 	'ortho_init': True, 
 	'activation_fn': 'relu'
 }
+
+  Value:  -5474.5419921875
+  Params:
+    gamma: 0.9
+    normalize_advantage: False
+    max_grad_norm: 0.6
+    use_rms_prop: False
+    gae_lambda: 0.9
+    n_steps: 512
+    learning_rate: 0.05045202133254835
+    ent_coef: 4.0148933914984925e-07
+    vf_coef: 0.6938370189818582
+    net_arch: large
+    ortho_init: False
+    activation_fn: relu
+
+
+
+-5469.6513671875 and parameters: {
+'gamma': 0.995, 
+'normalize_advantage': True, 
+'max_grad_norm': 0.5, 
+'use_rms_prop': True, 
+'gae_lambda': 1.0, 
+'n_steps': 128, 
+'learning_rate': 5.180499719423679e-05, 
+'ent_coef': 3.4998749229307126e-07, 
+'vf_coef': 0.7318460622065321, 
+'net_arch': 'large', 
+'ortho_init': True, 
+'activation_fn': 'relu'
+}

@@ -5,10 +5,10 @@ from optuna.pruners import MedianPruner
 from optuna.samplers import TPESampler
 from stable_baselines3 import A2C
 from stable_baselines3.common.callbacks import EvalCallback
-from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
+from stable_baselines3.common.vec_env import VecEnv, VecMonitor
 from torch import nn as nn
 
-from Slitherai.AI.AIEnv import AIEnv
+from Slitherai.AI.AIEnv import AIEnv, AIEnvUI
 
 
 # Taken from rl-baselines3-zoo[https://github.com/DLR-RM/rl-baselines3-zoo/blob/master/rl_zoo3/hyperparams_opt.py]
@@ -33,9 +33,7 @@ def sample_a2c_params(trial: optuna.Trial) -> Dict[str, Any]:
     learning_rate = trial.suggest_float("learning_rate", 1e-5, 1, log=True)
     ent_coef = trial.suggest_float("ent_coef", 0.00000001, 0.1, log=True)
     vf_coef = trial.suggest_float("vf_coef", 0, 1)
-    net_arch_type = trial.suggest_categorical(
-        "net_arch", ["small", "medium", "large", "XL", "XXL"]
-    )
+    net_arch_type = trial.suggest_categorical("net_arch", ["small", "medium", "large"])
     # Uncomment for gSDE (continuous actions)
     # log_std_init = trial.suggest_float("log_std_init", -4, 1)
     ortho_init = trial.suggest_categorical("ortho_init", [False, True])
@@ -46,8 +44,6 @@ def sample_a2c_params(trial: optuna.Trial) -> Dict[str, Any]:
         "small": dict(pi=[64, 64], vf=[64, 64]),
         "medium": dict(pi=[256, 256], vf=[256, 256]),
         "large": dict(pi=[512, 512], vf=[512, 512]),
-        "XL": dict(pi=[512, 512, 512], vf=[512, 512, 512]),
-        "XXL": dict(pi=[1024, 1024], vf=[1024, 1024]),
     }[net_arch_type]
 
     activation_fn = {
@@ -78,11 +74,11 @@ def sample_a2c_params(trial: optuna.Trial) -> Dict[str, Any]:
     }
 
 
-N_TRIALS = 200
+N_TRIALS = 10000
 N_STARTUP_TRIALS = 1
 N_EVALUATIONS = 2
 N_AGENTS = 1
-N_TIMESTEPS = int(1e4)
+N_TIMESTEPS = int(2e4)
 EVAL_FREQ = int(N_TIMESTEPS / N_EVALUATIONS)
 N_EVAL_EPISODES = 2
 
@@ -98,7 +94,7 @@ class TrialEvalCallback(EvalCallback):
 
     def __init__(
         self,
-        eval_env: VecMonitor,
+        eval_env: VecEnv,
         trial: optuna.Trial,
         n_eval_episodes: int = 5,
         eval_freq: int = 10000,
@@ -133,10 +129,10 @@ def objective(trial: optuna.Trial) -> float:
     # Sample hyperparameters.
     kwargs.update(sample_a2c_params(trial))
     # Create the RL model.
-    env = VecMonitor(AIEnv(N_AGENTS, 7500, 6000, 50))
+    env = VecMonitor(AIEnv(N_AGENTS, 5000, 6000, 25, 1, 20))
     model = A2C(**kwargs, env=env)
     # Create env used for evaluation.
-    eval_env = VecMonitor(AIEnv(N_AGENTS, 7500, 1500, 50))
+    eval_env = VecMonitor(AIEnv(N_AGENTS, 5000, 1500, 25, 1, 20))
 
     # Create the callback that will periodically evaluate and report the performance.
     eval_callback = TrialEvalCallback(
@@ -150,13 +146,14 @@ def objective(trial: optuna.Trial) -> float:
 
     nan_encountered = False
     try:
-        model.learn(N_TIMESTEPS, callback=eval_callback)
+        model.learn(N_TIMESTEPS, callback=eval_callback, progress_bar=True)
     except Exception as e:
         # Sometimes, random hyperparams can generate NaN.
         print(e)
         nan_encountered = True
     finally:
         # Free memory.
+        env.close()
         eval_env.close()
 
     # Tell the optimizer that the trial failed.
@@ -180,7 +177,11 @@ if __name__ == "__main__":
 
     study = optuna.create_study(sampler=sampler, pruner=pruner, direction="maximize")
     try:
-        study.optimize(objective, n_trials=N_TRIALS, show_progress_bar=True, n_jobs=10)
+        study.optimize(
+            objective,
+            n_trials=N_TRIALS,
+            show_progress_bar=True,
+        )
     except KeyboardInterrupt:
         pass
 
@@ -198,3 +199,4 @@ if __name__ == "__main__":
     print("  User attrs:")
     for key, value in trial.user_attrs.items():
         print("    {}: {}".format(key, value))
+

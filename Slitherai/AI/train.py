@@ -5,7 +5,7 @@ from stable_baselines3.common.callbacks import (
 )
 import torch as th
 import wandb
-from stable_baselines3 import A2C
+from stable_baselines3 import A2C, PPO, DQN
 from stable_baselines3.common.vec_env import VecMonitor
 from stable_baselines3.common.vec_env import VecNormalize, VecCheckNan
 from wandb.integration.sb3 import WandbCallback
@@ -51,61 +51,55 @@ class TestRun:
 
 config = {
     "policy_type": "MlpPolicy",
+    "total_timesteps": 10_000_000,
     "number_of_agents": 5,
-    "world_size": 5000,
-    "food_to_spawn": 25,
+    "world_size": 7500,
+    "food_to_spawn": 50,
     "max_resets": 10,
-    "total_timesteps": 1_000_000,
-    "learning_rate": 7e-3,
-    "n_steps": 5,
-    "normalize_advantage": False,
-    "gamma": 0.99,
-    "gae_lambda": 1.0,
-    "ent_coef": 0.001,
-    "vf_coef": 0.5,
+    "gamma": 0.995,
+    "normalize_advantage": True,
     "max_grad_norm": 0.5,
     "use_rms_prop": True,
+    "gae_lambda": 1.0,
+    "n_steps": 128,
+    "learning_rate": 5e-05,
+    "ent_coef": 0.01,
+    "vf_coef": 0.75,
     "policy_kwargs": {
         "activation_fn": th.nn.ReLU,
         "net_arch": {
-            "vf": [256, 256],
-            "pi": [256, 256],
+            "vf": [512, 512],
+            "pi": [512, 512],
         },
     },
 }
 
 
 def main():
-    env = VecNormalize(
-        VecMonitor(
-            VecCheckNan(
-                AIEnvUI(
-                    config["number_of_agents"],
-                    config["world_size"],
-                    24000,
-                    config["food_to_spawn"],
-                    config["max_resets"],
-                    20,
-                )
-            ),
-        ),
-        clip_obs=OPTIMAL_RESOLUTION_WIDTH,
+    env = VecMonitor(
+        VecCheckNan(
+            AIEnvUI(
+                config["number_of_agents"],
+                config["world_size"],
+                24000,
+                config["food_to_spawn"],
+                config["max_resets"],
+                20,
+            )
+        )
     )
 
-    eval_env = VecNormalize(
-        VecMonitor(
-            VecCheckNan(
-                AIEnvUI(
-                    config["number_of_agents"],
-                    config["world_size"],
-                    1500,
-                    config["food_to_spawn"],
-                    config["max_resets"],
-                    20,
-                ),
-            )
-        ),
-        clip_obs=OPTIMAL_RESOLUTION_WIDTH,
+    eval_env = VecMonitor(
+        VecCheckNan(
+            AIEnvUI(
+                config["number_of_agents"],
+                config["world_size"],
+                1500,
+                config["food_to_spawn"],
+                config["max_resets"],
+                20,
+            ),
+        )
     )
 
     if USE_WANDB:
@@ -120,19 +114,10 @@ def main():
     else:
         run = TestRun("test")
 
-    model = A2C(
+    model = PPO(
         config["policy_type"],
         env,
         verbose=1,
-        learning_rate=config["learning_rate"],
-        n_steps=config["n_steps"],
-        normalize_advantage=config["normalize_advantage"],
-        gamma=config["gamma"],
-        gae_lambda=config["gae_lambda"],
-        ent_coef=config["ent_coef"],
-        vf_coef=config["vf_coef"],
-        max_grad_norm=config["max_grad_norm"],
-        use_rms_prop=config["use_rms_prop"],
         tensorboard_log=f"runs/{run.id}",
         device="cuda",
         policy_kwargs=config["policy_kwargs"],
@@ -176,8 +161,10 @@ def main():
         pass
 
     model.save(f"models/finished/{run.id}")
-    env.save(f"models/finished/{run.id}-vec_normalize")
+    if isinstance(env, VecNormalize):
+        env.save(f"models/finished/{run.id}-vec_normalize")
 
 
 if __name__ == "__main__":
     main()
+

@@ -117,12 +117,12 @@ class AIEnv(VecEnv, Server):
         observations[i] = player.direction.y
         i += 1
 
-        # Is Boosting [1 float] 0 or 1
-        observations[i] = 1.0 if player.is_boosting() else 0.0
+        # Is Boosting [1 float] -1 or 1
+        observations[i] = 1.0 if player.is_boosting() else -1
         i += 1
 
-        # Can Boost [1 float] 0 or 1
-        observations[i] = 1.0 if player.can_boost() else 0.0
+        # Can Boost [1 float] -1 or 1
+        observations[i] = 1.0 if player.can_boost() else -1
         i += 1
 
         # My Body parts as distance from head [2 float]
@@ -232,11 +232,11 @@ class AIEnv(VecEnv, Server):
                 i += 1
                 observations[i] = p.direction.y
                 i += 1
-                # Is Boosting [1 float] 0 or 1
-                observations[i] = 1.0 if p.is_boosting() else 0.0
+                # Is Boosting [1 float] -1 or 1
+                observations[i] = 1.0 if p.is_boosting() else -1
                 i += 1
-                # Can Boost [1 float] 0 or 1
-                observations[i] = 1.0 if p.can_boost() else 0.0
+                # Can Boost [1 float] -1 or 1
+                observations[i] = 1.0 if p.can_boost() else -1
                 i += 1
                 # My Body parts as distance from head [2 float] * 100 normalized using world size
                 for body_part in p.bodies:
@@ -363,16 +363,19 @@ class AIEnv(VecEnv, Server):
                     angle = pr.vector_2dot_product(
                         self.players[i].direction, self.closest_food[i][2]
                     )
-                    rewards[i] += (
-                        angle * (1 - dist_to_food_norm) * self.closest_food[i][1]
-                    )
+                    rewards[i] += angle * (1 - dist_to_food_norm) * 5
 
                 # Close to Center reward
-                center_dist = pr.vector_2distance(
-                    self.players[i].bodies[0],
-                    pr.Vector2(self.world_size // 2, self.world_size // 2),
-                ) / np.sqrt(2 * (self.world_size**2))
-                rewards[i] -= center_dist * 10
+                # total_dist = np.sqrt(2 * (self.world_size**2))
+                # center_dist = (
+                #     pr.vector_2distance(
+                #         self.players[i].bodies[0],
+                #         pr.Vector2(self.world_size // 2, self.world_size // 2),
+                #     )
+                #     / total_dist
+                # )
+                #
+                # rewards[i] -= 0 if center_dist < total_dist * 0.5 else center_dist * 100
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
@@ -551,3 +554,4 @@ if __name__ == "__main__":
         for i in range(len(rewards)):
             print(f"Agent {i} got reward {rewards[i]}")
         print(f"Step {step}")
+
