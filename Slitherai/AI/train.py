@@ -53,9 +53,9 @@ config = {
     # World
     "total_timesteps": 1_000_000,
     "number_of_agents": 1,
-    "world_size": 10000,
-    "food_to_spawn": 5000,
-    "max_resets": 1,
+    "world_size": 7500,
+    "food_to_spawn": 2850,
+    "max_resets": 100,
     # Algorithm
     "policy_type": "MlpPolicy",
     "gamma": 0.9999,
