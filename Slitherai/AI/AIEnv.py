@@ -144,16 +144,13 @@ class AIEnv(VecEnv, Server):
 
         # Environment Observations
         # Closest Distance to Edge [2 floats] normalized using world_size
-        if origin.x > self.world_size / 2:
-            observations[i] = (self.world_size - origin.x) / self.world_size
-        else:
-            observations[i] = (-origin.x) / self.world_size
+        observations[i] = (self.world_size - origin.x) / self.world_size
         i += 1
-
-        if origin.y > self.world_size / 2:
-            observations[i] = (self.world_size - origin.y) / self.world_size
-        else:
-            observations[i] = (-origin.y) / self.world_size
+        observations[i] = (self.world_size - origin.y) / self.world_size
+        i += 1
+        observations[i] = (-origin.x) / self.world_size
+        i += 1
+        observations[i] = (-origin.y) / self.world_size
         i += 1
 
         # Food and Player Observations
@@ -310,14 +307,14 @@ class AIEnv(VecEnv, Server):
                 entity_id = event.EntityThatAte
                 mass_eaten = event.MassEaten
                 # Food Eating Reward
-                rewards[entity_id] += mass_eaten * 20
+                rewards[entity_id] += mass_eaten * 30
             elif event.type == 1:  # Player Killed
                 entity_id = event.EntityKilled
                 killer_id = event.KilledBy
 
                 if killer_id is None:
                     # Killed by border reward
-                    rewards[entity_id] -= 500
+                    rewards[entity_id] -= 5000
                 else:
                     # Killed by other player reward. Also, if killed by smaller player, give bigger punishment
                     rewards[entity_id] -= np.max(
@@ -353,7 +350,7 @@ class AIEnv(VecEnv, Server):
         for i in range(self.num_players):
             if not dones[i]:
                 # Size reward
-                rewards[i] += (self.players[i].length() / MAX_LENGTH) * 50
+                rewards[i] += (self.players[i].length() / MAX_LENGTH) * 100
 
                 # Getting closer to food reward and facing the direction of the food
                 dist_to_food_norm = self.closest_food[i][0] / 3000
@@ -363,11 +360,14 @@ class AIEnv(VecEnv, Server):
                     angle = pr.vector_2dot_product(
                         self.players[i].direction, self.closest_food[i][2]
                     )
-                    rewards[i] += angle * (1 - dist_to_food_norm) * 10
+                    rewards[i] += angle * (1 - dist_to_food_norm) * 5
 
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
+
+            # Rescale rewards
+            rewards[i] /= 1000
 
             self.num_steps[i] += 1
             # Max Steps

@@ -1,10 +1,10 @@
 from Slitherai.Environment.Constants import MAX_LENGTH
 
-CLOSEST_FOODS = 5
+CLOSEST_FOODS = 10
 CLOSEST_PLAYERS = 0
 OBSERVATION_SIZE = (
     (MAX_LENGTH - 1) * 2
-    + 7
+    + 9
     + CLOSEST_FOODS * 3
     + CLOSEST_PLAYERS * (5 + 2 * MAX_LENGTH)
 )
@@ -27,3 +27,4 @@ ACTION_LIST = [
     (False, True, True, False, True),  # A + S + Space
     (False, False, True, True, True),  # S + D + Space
 ]
+
