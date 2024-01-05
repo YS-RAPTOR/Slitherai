@@ -278,6 +278,11 @@ class AIEnv(VecEnv, Server):
 
         if i != OBSERVATION_SIZE:
             raise Exception("Observation size is not 2319")
+
+        # Check if finite
+        if not np.isfinite(observations).all():
+            raise Exception("Observation is not finite")
+
         return observations  # Full Total Floats 2319
 
     def step_async(self, actions: np.ndarray) -> None:

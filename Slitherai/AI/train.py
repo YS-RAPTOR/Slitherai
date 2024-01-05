@@ -52,21 +52,24 @@ class TestRun:
 config = {
     # World
     "total_timesteps": 1_000_000,
-    "number_of_agents": 1,
-    "world_size": 1000,
-    "food_to_spawn": 50,
-    "max_resets": 1,
+    "number_of_agents": 25,
+    "world_size": 7500,
+    "food_to_spawn": 2850,
+    "max_resets": 50,
     # Algorithm
     "policy_type": "MlpPolicy",
-    "gamma": 0.9999,
+    "learning_rate": 3e-4,
+    "n_steps": 2048,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "clip_range_vf": None,
     "normalize_advantage": True,
+    "ent_coef": 0.0,
+    "vf_coef": 0.5,
     "max_grad_norm": 0.5,
-    "use_rms_prop": True,
-    "gae_lambda": 1.0,
-    "n_steps": 128,
-    "learning_rate": 0.01,
-    "ent_coef": 0.9,
-    "vf_coef": 0.75,
     "policy_kwargs": {
         "activation_fn": th.nn.Tanh,
         "net_arch": {
@@ -87,7 +90,8 @@ def main():
                 config["food_to_spawn"],
                 config["max_resets"],
                 20,
-            )
+            ),
+            warn_once=False,
         )
     )
 
@@ -101,6 +105,7 @@ def main():
                 config["max_resets"],
                 20,
             ),
+            warn_once=False,
         )
     )
 
@@ -122,10 +127,21 @@ def main():
         verbose=1,
         tensorboard_log=f"runs/{run.id}",
         device="cuda",
+        learning_rate=config["learning_rate"],
+        n_steps=config["n_steps"],
+        batch_size=config["batch_size"],
+        n_epochs=config["n_epochs"],
+        gamma=config["gamma"],
+        gae_lambda=config["gae_lambda"],
+        clip_range=config["clip_range"],
+        clip_range_vf=config["clip_range_vf"],
+        normalize_advantage=config["normalize_advantage"],
+        ent_coef=config["ent_coef"],
+        vf_coef=config["vf_coef"],
+        max_grad_norm=config["max_grad_norm"],
         policy_kwargs=config["policy_kwargs"],
     )
 
-    eval_callback = EvalCallback(eval_env, eval_freq=10000)
     checkpoint_callback = CheckpointCallback(
         save_freq=1000, save_path=f"models/{run.id}"
     )
@@ -142,9 +158,7 @@ def main():
                 model_save_freq=500,
                 verbose=2,
             )
-            callbaks = CallbackList(
-                [eval_callback, wandb_callback, checkpoint_callback]
-            )
+            callbaks = CallbackList([wandb_callback, checkpoint_callback])
 
             model.learn(
                 total_timesteps=config["total_timesteps"],
@@ -153,7 +167,7 @@ def main():
             )
             run.finish()
         else:
-            callbaks = CallbackList([eval_callback, checkpoint_callback])
+            callbaks = CallbackList([checkpoint_callback])
             model.learn(
                 total_timesteps=config["total_timesteps"],
                 progress_bar=True,
@@ -168,5 +182,8 @@ def main():
 
 
 if __name__ == "__main__":
+    main()
+    main()
+    main()
     main()
 
