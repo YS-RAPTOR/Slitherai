@@ -372,7 +372,7 @@ class AIEnv(VecEnv, Server):
                     self.players[i].bodies[0],
                     pr.Vector2(self.world_size // 2, self.world_size // 2),
                 ) / np.sqrt(2 * (self.world_size**2))
-                rewards[i] += 1 - center_dist
+                rewards[i] -= center_dist * 10
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
