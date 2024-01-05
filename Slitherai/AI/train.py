@@ -53,9 +53,9 @@ config = {
     # World
     "total_timesteps": 1_000_000,
     "number_of_agents": 1,
-    "world_size": 7500,
-    "food_to_spawn": 2850,
-    "max_resets": 100,
+    "world_size": 1000,
+    "food_to_spawn": 50,
+    "max_resets": 1,
     # Algorithm
     "policy_type": "MlpPolicy",
     "gamma": 0.9999,
@@ -68,10 +68,10 @@ config = {
     "ent_coef": 0.9,
     "vf_coef": 0.75,
     "policy_kwargs": {
-        "activation_fn": th.nn.ReLU,
+        "activation_fn": th.nn.Tanh,
         "net_arch": {
-            "vf": [512, 512],
-            "pi": [512, 512],
+            "vf": [64, 64],
+            "pi": [64, 64],
         },
     },
 }

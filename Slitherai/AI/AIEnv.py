@@ -362,12 +362,22 @@ class AIEnv(VecEnv, Server):
                     )
                     rewards[i] += angle * (1 - dist_to_food_norm) * 5
 
+                # Center distance reward
+                center_dist = pr.vector_2distance(
+                    pr.Vector2(self.world_size // 2, self.world_size // 2),
+                    self.players[i].bodies[0],
+                )
+
+                rewards[i] += (
+                    1 - center_dist / ((self.world_size / 2) - self.world_size * 0.1)
+                ) * 5
+
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
 
             # Rescale rewards
-            rewards[i] /= 1000
+            rewards[i] /= 100
 
             self.num_steps[i] += 1
             # Max Steps
