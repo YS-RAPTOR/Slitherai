@@ -9,6 +9,7 @@ from stable_baselines3.common.vec_env.base_vec_env import (
     VecEnvObs,
     VecEnvStepReturn,
 )
+from Slitherai.Environment.CameraComponent import ServerCameraComponent
 from Slitherai.Environment.Constants import (
     INITIAL_FOOD_SPAWN,
     MAX_LENGTH,
@@ -21,6 +22,7 @@ from Slitherai.AI.Constants import (
     CLOSEST_PLAYERS,
     OBSERVATION_SIZE,
 )
+from Slitherai.Environment.Core.Component import Component
 from Slitherai.Environment.Core.Entity import Entity
 from Slitherai.Environment.Core.GridWorld import GridWorld
 from Slitherai.Environment.Core.World import World
@@ -37,6 +39,7 @@ class AIEnv(VecEnv, Server):
         world_size: int = 50000,
         max_steps: int = -1,
         initial_food_spawn: int = INITIAL_FOOD_SPAWN,
+        reset_food_every: int = 2,
         frame_rate=20,
     ):
         # Variables
@@ -77,15 +80,11 @@ class AIEnv(VecEnv, Server):
         self.num_steps = [0 for _ in range(self.num_players)]
 
         # Food Reset
-        self.reset_food_every = 25
+        self.reset_food_every = reset_food_every
         self.num_resets = 0
 
         # Reward Stuff
-        self.closest_food = [(-1.0, 0.0) for _ in range(num_players)]
-
-        # Full Reset Time
-        self.num_resets = 0
-        self.max_resets = 100
+        self.closest_food = [(-1.0, 0.0, pr.Vector2(0, 0)) for _ in range(num_players)]
 
         super().__init__(
             num_players,
@@ -275,9 +274,10 @@ class AIEnv(VecEnv, Server):
             self.closest_food[player.id] = (
                 pr.vector_2distance(foods[0].bodies[0], origin),
                 foods[0].mass,
+                pr.vector2_normalize(pr.vector2_subtract(foods[0].bodies[0], origin)),
             )
         else:
-            self.closest_food[player.id] = (-1.0, 0.0)
+            self.closest_food[player.id] = (-1.0, 0.0, pr.Vector2(0, 0))
 
         if i != OBSERVATION_SIZE:
             raise Exception("Observation size is not 2319")
@@ -317,7 +317,7 @@ class AIEnv(VecEnv, Server):
 
                 if killer_id is None:
                     # Killed by border reward
-                    rewards[entity_id] -= 1000
+                    rewards[entity_id] -= 5000
                 else:
                     # Killed by other player reward. Also, if killed by smaller player, give bigger punishment
                     rewards[entity_id] -= np.max(
@@ -333,7 +333,6 @@ class AIEnv(VecEnv, Server):
                 infos[entity_id]["TimeLimit.truncated"] = False
                 infos[entity_id]["terminal_observation"] = observations[entity_id]
                 self.reset_player(entity_id, True)
-                # TODO: Not sure if this is needed
                 self.get_active_world().update_grid()  # type: ignore
                 observations[entity_id] = self.get_observations(self.players[entity_id])
 
@@ -354,17 +353,26 @@ class AIEnv(VecEnv, Server):
         for i in range(self.num_players):
             if not dones[i]:
                 # Size reward
-                # rewards[i] += (self.players[i].length() / MAX_LENGTH) * 20
+                rewards[i] += (self.players[i].length() / MAX_LENGTH) * 20
 
-                # Getting closer to food reward
+                # Getting closer to food reward and facing the direction of the food
                 dist_to_food_norm = self.closest_food[i][0] / 3000
 
                 # If no food, then no reward
-                # if dist_to_food_norm > 0:
-                #     rewards[i] += np.max([2, self.closest_food[i][1]]) * (
-                #         1 - dist_to_food_norm
-                #     )
+                if dist_to_food_norm > 0:
+                    angle = pr.vector_2dot_product(
+                        self.players[i].direction, self.closest_food[i][2]
+                    )
+                    rewards[i] += (
+                        angle * (1 - dist_to_food_norm) * self.closest_food[i][1]
+                    )
 
+                # Close to Center reward
+                center_dist = pr.vector_2distance(
+                    self.players[i].bodies[0],
+                    pr.Vector2(self.world_size // 2, self.world_size // 2),
+                ) / np.sqrt(2 * (self.world_size**2))
+                rewards[i] += 1 - center_dist
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
                 rewards[i] -= MIN_BOOST_RADIUS - self.players[i].radius
@@ -380,9 +388,12 @@ class AIEnv(VecEnv, Server):
         return observations, rewards, dones, infos
 
     def reset_food(self):
-        for entity in self.get_active_world().entities:
-            if entity.name == "Food":
-                self.get_active_world().remove_entity(entity)
+        self.get_active_world().entities.clear()
+
+        self.get_active_world().entities.append(self.manager_entity)
+        for i in range(self.num_players):
+            if not self.players[i].is_dead:
+                self.get_active_world().entities.append(self.players[i].get_entity())
 
         # Spawn new food
         self.food_spawner.init()
@@ -390,7 +401,9 @@ class AIEnv(VecEnv, Server):
     def reset(self) -> VecEnvObs:
         self.num_steps = [0 for _ in range(self.num_players)]
         self.num_resets = 0
-        self.closest_food = [(-1.0, 0.0) for _ in range(self.num_players)]
+        self.closest_food = [
+            (-1.0, 0.0, pr.Vector2(0, 0)) for _ in range(self.num_players)
+        ]
 
         self.reset_food()
         for i in range(self.num_players):
@@ -405,14 +418,15 @@ class AIEnv(VecEnv, Server):
     def reset_player(self, player_id: int, dead=False) -> None:
         # Delete all the food and spawn new food
         self.num_steps[player_id] = 0
-        self.closest_food[player_id] = (-1.0, 0.0)
+        self.closest_food[player_id] = (-1.0, 0.0, pr.Vector2(0, 0))
         self.num_resets += 1
         if self.num_resets >= self.reset_food_every:
             self.num_resets = 0
             self.reset_food()
 
         location = pr.Vector2(
-            np.random.randint(0, self.world_size), np.random.randint(0, self.world_size)
+            np.random.randint(int(self.world_size * 0.25), int(self.world_size * 0.75)),
+            np.random.randint(int(self.world_size * 0.25), int(self.world_size * 0.75)),
         )
         direction = pr.Vector2(np.random.choice([-1, 1]), np.random.choice([-1, 1]))
         self.players[player_id].reset(location, direction)
@@ -458,12 +472,79 @@ class AIEnv(VecEnv, Server):
         return [None for _ in range(self.num_players)]
 
 
+class AIEnvUI(AIEnv):
+    def __init__(
+        self,
+        num_players: int,
+        world_size: int,
+        max_steps: int = -1,
+        initial_food_spawn: int = INITIAL_FOOD_SPAWN,
+        reset_food_every: int = 2,
+        frame_rate: int = 20,
+    ):
+        super().__init__(
+            num_players,
+            world_size,
+            max_steps,
+            initial_food_spawn,
+            reset_food_every,
+            frame_rate,
+        )
+        pr.init_window(1920 // 2, 1080 // 2, "Slitherai")
+        center = pr.Vector2(1920 // 4, 1080 // 4)
+        camera = pr.Camera2D(center, pr.Vector2(world_size // 2, world_size // 2), 0, 1)
+        self.init_camera(camera)
+        self.camera_component = ServerCameraComponent(self)
+        self.manager_entity.components.append(self.camera_component)
+        self.ui_entity = Entity("UI", [AIInfo(self)])
+        self.worlds[self.active_world].add_ui_entity(self.ui_entity)
+        self.targetted_player = 0
+
+    def step_wait(self) -> VecEnvStepReturn:
+        vals = super().step_wait()
+        if pr.window_should_close():
+            raise KeyboardInterrupt
+
+        if pr.is_key_pressed(pr.KeyboardKey.KEY_LEFT):
+            self.targetted_player = (self.targetted_player - 1) % self.num_players
+        if pr.is_key_pressed(pr.KeyboardKey.KEY_RIGHT):
+            self.targetted_player = (self.targetted_player + 1) % self.num_players
+
+        self.ui_entity.components[0].set_reward(vals[1][self.targetted_player])  # type: ignore
+
+        self.camera.target = self.players[self.targetted_player].bodies[0]
+        self.draw()
+        return vals
+
+    def __del__(self):
+        super().__del__()
+        pr.close_window()
+
+
+class AIInfo(Component):
+    def __init__(self, app: AIEnvUI) -> None:
+        self.app = app
+
+    def set_reward(self, reward: float) -> None:
+        self.reward = reward
+
+    def draw(self, camera: pr.Camera2D) -> None:
+        text = f"Targetting Player {self.app.targetted_player}\nRewards: {self.reward}\nNum Steps: {self.app.num_steps[self.app.targetted_player]}"
+        pr.draw_text(
+            text,
+            10,
+            70,
+            20,
+            pr.Color(0, 0, 0, 255),
+        )
+
+
 if __name__ == "__main__":
     print("Testing AIEnv")
     num_agents = 10
-    env = AIEnv(num_agents, 1000)
+    env = AIEnvUI(num_agents, 7500, 1000, 10, 60)
     obs = env.reset()
-    for step in range(1000):
+    for step in range(10000):
         obs, rewards, dones, infos = env.step(
             np.array([env.action_space.sample() for _ in range(num_agents)])
         )

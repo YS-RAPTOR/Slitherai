@@ -22,12 +22,11 @@ class Food(CollisionComponent):
         location: pr.Vector2,
         can_grow: bool = True,
         mass: int = 1,
-        radius: float = 10,
         do_draw: bool = True,
     ) -> None:
         super().__init__()
         self.bodies = [location]
-        self.radius = radius
+        self.radius = 9 + mass
         self.color = pr.Color(0, 255, 0, 255)
         self.mass = mass
         self.can_grow = can_grow
