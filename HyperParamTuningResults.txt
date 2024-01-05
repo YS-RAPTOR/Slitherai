@@ -75,3 +75,33 @@ Best trial:
 [I 2024-01-04 10:32:59,817] Trial 15 finished with value: 4706.80712890625 and parameters: {'batch_size': 8, 'n_steps': 128, 'gamma': 0.99, 'learning_rate': 0.0013175038349466453, 'ent_coef': 0.0009082364080774735, 'clip_range': 0.1, 'n_epochs': 20, 'gae_lambda': 0.8, 'max_grad_norm': 2, 'vf_coef': 0.7684250836197356, 'net_arch': 'small', 'ortho_init': True, 'activation_fn': 'relu'}. Best is trial 15 with value: 4706.80712890625.
 
 [I 2024-01-04 10:08:08,014] Trial 6 finished with value: 4434.27490234375 and parameters: {'batch_size': 32, 'n_steps': 16, 'gamma': 0.9, 'learning_rate': 0.0016110338283275164, 'ent_coef': 4.006975889361867e-05, 'clip_range': 0.1, 'n_epochs': 1, 'gae_lambda': 0.9, 'max_grad_norm': 0.9, 'vf_coef': 0.8944931280036353, 'net_arch': 'small', 'ortho_init': False, 'activation_fn': 'tanh'}. Best is trial 6 with value: 4434.27490234375.
+
+Trial 10 finished with value: 2106.53076171875 and parameters: {
+	'gamma': 0.995,
+	'normalize_advantage': True,
+	'max_grad_norm': 2,
+	'use_rms_prop': False,
+	'gae_lambda': 0.98,
+	'n_steps': 256,
+	'learning_rate': 0.0011289028886746742,
+	'ent_coef': 0.00020580837378205268,
+	'vf_coef': 0.20383559076740454,
+	'net_arch': 'XL', 
+	'ortho_init': False, 
+	'activation_fn': 'relu'
+}
+
+Trial 11 finished with value: 3031.8056640625 and parameters: {
+	'gamma': 0.99, 
+	'normalize_advantage': False, 
+	'max_grad_norm': 0.3, 
+	'use_rms_prop': True, 
+	'gae_lambda': 0.92, 
+	'n_steps': 16, 
+	'learning_rate': 0.7792897743192193, 
+	'ent_coef': 0.08822977162101774, 
+	'vf_coef': 0.3742976107431186, 
+	'net_arch': 'XL', 
+	'ortho_init': True, 
+	'activation_fn': 'relu'
+}

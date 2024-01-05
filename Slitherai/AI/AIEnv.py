@@ -85,7 +85,7 @@ class AIEnv(VecEnv, Server):
 
         # Full Reset Time
         self.num_resets = 0
-        self.max_resets = 1000
+        self.max_resets = 100
 
         super().__init__(
             num_players,
@@ -360,10 +360,10 @@ class AIEnv(VecEnv, Server):
                 dist_to_food_norm = self.closest_food[i][0] / 3000
 
                 # If no food, then no reward
-                if dist_to_food_norm > 0:
-                    rewards[i] += np.max([2, self.closest_food[i][1]]) * (
-                        1 - dist_to_food_norm
-                    )
+                # if dist_to_food_norm > 0:
+                #     rewards[i] += np.max([2, self.closest_food[i][1]]) * (
+                #         1 - dist_to_food_norm
+                #     )
 
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost
