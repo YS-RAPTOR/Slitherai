@@ -378,8 +378,8 @@ class AIEnv(VecEnv, Server):
                 )
 
                 rewards[i] += (
-                    1 - center_dist / ((self.world_size / 2) - self.world_size * 0.1)
-                ) * 5
+                    1 - center_dist / ((self.world_size / 2) - self.world_size * 0.25)
+                ) * 100
 
             if not self.players[i].can_boost() and self.actions[i] >= 8:
                 # Boosting when not allowed. Reward is greater if you are closer to being able to boost

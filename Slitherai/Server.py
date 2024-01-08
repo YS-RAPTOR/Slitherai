@@ -68,10 +68,12 @@ class Server(Application):
 if __name__ == "__main__":
     # Initialize the client
     GUI = True
-    WORLD_SIZE = 7500
+    WORLD_SIZE = 50000
     NUM_AGENTS = 10
-    FOOD_TO_SPAWN = 50
+    FOOD_TO_SPAWN = 5000
+    HAS_AI = False
     server = Server("Slitherai", 60, GUI)
+
     if GUI:
         center = pr.Vector2(server.width / 2, server.height / 2)
         camera = pr.Camera2D(center, pr.Vector2(WORLD_SIZE // 2, WORLD_SIZE // 2), 0, 1)
@@ -79,27 +81,19 @@ if __name__ == "__main__":
 
     # Initialize the world
     food_spawner = FoodSpawner(server, FOOD_TO_SPAWN)
+    components = [ServerNetworkManager(server.host, server.port, server), food_spawner]
     if GUI:
-        manager = Entity(
-            "Manager",
-            [
-                ServerCameraComponent(server),
-                ServerNetworkManager(server.host, server.port, server),
-                AiManager(
-                    server, "./models/finished/pmjes7m7", food_spawner, NUM_AGENTS
-                ),
-                food_spawner,
-            ],
+        components.append(ServerCameraComponent(server))
+
+    if HAS_AI:
+        components.append(
+            AiManager(server, "./Finished Models/134AM", food_spawner, NUM_AGENTS)
         )
-    else:
-        manager = Entity(
-            "Manager",
-            [
-                ServerNetworkManager(server.host, server.port, server),
-                AiManager(server, "./models/finished/pmjes7m7", food_spawner),
-                food_spawner,
-            ],
-        )
+
+    manager = Entity(
+        "Manager",
+        components,
+    )
 
     world = GridWorld(WORLD_SIZE, 50)
     world.add_entity(manager)
@@ -112,3 +106,4 @@ if __name__ == "__main__":
     print(f"Listening on {server.host}:{server.port}")
     server.run()
     print("Server closed.")
+

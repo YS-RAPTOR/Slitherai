@@ -109,7 +109,9 @@ class ServerNetworkManager(Component):
                     )
                 elif component.collision_type == Food.collision_type:
                     self.replicator.add_food(
-                        entity_index, component.radius, component.bodies[0]
+                        entity_index,
+                        component.mass,  # type: ignore
+                        component.bodies[0],
                     )
 
             self.server_socket.sendto(self.replicator.encode(), client)
@@ -197,12 +199,11 @@ class ClientNetworkManager(Component):
         for food in self.replicator.foods:
             entity = Entity(
                 f"Food{food.id}",
-                [Food(food.position, radius=food.radius)],  # type: ignore
+                [Food(food.position, mass=food.radius)],  # type: ignore
             )
             self.app.get_active_world().add_entity(entity)
 
         if not found:
-            print("Not Found")
             self.not_found_streak += 1
             if self.not_found_streak >= 2:
                 self.app.set_active_world(2)
@@ -248,5 +249,9 @@ class ClientNetworkManager(Component):
         if not hasattr(self, "client_socket"):
             return
 
-        self.client_socket.sendto(b"\xff", self.server_address)
-        self.client_socket.close()
+        try:
+            self.client_socket.sendto(b"\xff", self.server_address)
+            self.client_socket.close()
+        except Exception:
+            pass
+

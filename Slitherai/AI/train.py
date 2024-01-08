@@ -13,7 +13,7 @@ from Slitherai.Environment.Constants import OPTIMAL_RESOLUTION_WIDTH
 
 from Slitherai.AI.AIEnv import AIEnv, AIEnvUI
 
-USE_WANDB = True
+USE_WANDB = False
 
 
 class TestRun:
@@ -31,7 +31,7 @@ world_config_1 = {
     # World
     "total_timesteps": 1_000_000,
     "number_of_agents": 1,
-    "world_size": 1000,
+    "world_size": 2000,
     "food_to_spawn": 0,
     "max_resets": 1,
 }
@@ -40,8 +40,8 @@ world_config_1 = {
 world_config_2 = {
     # World
     "total_timesteps": 1_000_000,
-    "number_of_agents": 4,
-    "world_size": 2000,
+    "number_of_agents": 8,
+    "world_size": 2500,
     "food_to_spawn": 0,
     "max_resets": 1,
 }
@@ -59,7 +59,7 @@ world_config_3 = {
 # 4. Train on 7500x7500 world with food, 25 agents
 world_config_4 = {
     # World
-    "total_timesteps": 1_000_000,
+    "total_timesteps": 10_000_000,
     "number_of_agents": 25,
     "world_size": 7500,
     "food_to_spawn": 2850,
@@ -69,7 +69,7 @@ world_config_4 = {
 # Algorithm
 algorithm_config = {
     "policy_type": "MlpPolicy",
-    "learning_rate": 3e-4,
+    "learning_rate": 3e-5,
     "n_steps": 2048,
     "batch_size": 64,
     "n_epochs": 10,
@@ -91,7 +91,7 @@ algorithm_config = {
 }
 
 
-config = {**world_config_1, **algorithm_config}
+config = {**world_config_2, **algorithm_config}
 
 
 def main():
@@ -121,28 +121,33 @@ def main():
     else:
         run = TestRun("test")
 
-    model = PPO(
-        config["policy_type"],
-        env,
-        verbose=1,
-        tensorboard_log=f"runs/{run.id}",
-        device="cuda",
-        learning_rate=config["learning_rate"],
-        n_steps=config["n_steps"],
-        batch_size=config["batch_size"],
-        n_epochs=config["n_epochs"],
-        gamma=config["gamma"],
-        gae_lambda=config["gae_lambda"],
-        clip_range=config["clip_range"],
-        clip_range_vf=config["clip_range_vf"],
-        normalize_advantage=config["normalize_advantage"],
-        ent_coef=config["ent_coef"],
-        vf_coef=config["vf_coef"],
-        max_grad_norm=config["max_grad_norm"],
-        policy_kwargs=config["policy_kwargs"],
-    )
+    # model = PPO(
+    #     config["policy_type"],
+    #     env,
+    #     verbose=1,
+    #     tensorboard_log=f"runs/{run.id}",
+    #     device="cuda",
+    #     learning_rate=config["learning_rate"],
+    #     n_steps=config["n_steps"],
+    #     batch_size=config["batch_size"],
+    #     n_epochs=config["n_epochs"],
+    #     gamma=config["gamma"],
+    #     gae_lambda=config["gae_lambda"],
+    #     clip_range=config["clip_range"],
+    #     clip_range_vf=config["clip_range_vf"],
+    #     normalize_advantage=config["normalize_advantage"],
+    #     ent_coef=config["ent_coef"],
+    #     vf_coef=config["vf_coef"],
+    #     max_grad_norm=config["max_grad_norm"],
+    #     policy_kwargs=config["policy_kwargs"],
+    # )
 
-    # model = model.load("models/finished/1")
+    model = PPO.load("Finished Models/Transfer1")
+    model.observation_space = env.observation_space
+    model.n_envs = config["number_of_agents"]
+    model.rollout_buffer.n_envs = config["number_of_agents"]
+    model.rollout_buffer.reset()
+    model.set_env(env)
 
     checkpoint_callback = CheckpointCallback(
         save_freq=1000, save_path=f"models/{run.id}"
